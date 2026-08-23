@@ -11,6 +11,7 @@ out/
 .obsidian/
 client/node_modules/
 client/dist/
+client/*.tsbuildinfo
 client/qa/node_modules/
 client/qa/screenshots/
 client/qa/results/

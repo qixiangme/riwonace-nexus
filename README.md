@@ -162,19 +162,19 @@ spring:
 ```kotlin
 // agent-app/src/main/kotlin/com/riwonace/agent/mcp/McpGateway.kt
 @Component
-class McpGateway(private val clients: List<McpSyncClient>) {
+class McpGateway(private val clients: List<McpSyncClient>) : DataToolGateway {
 
-    fun vectorSearch(query: String, topK: Int = 4): String =
+    override fun vectorSearch(query: String, topK: Int): String =
         callTool("vector_search", mapOf("query" to query, "topK" to topK))
 
-    fun runSql(sql: String): String =
+    override fun runSql(sql: String): String =
         callTool("run_sql", mapOf("sql" to sql))
 
-    fun kgSearch(query: String): String =
+    override fun kgSearch(query: String): String =
         callTool("kg_search", mapOf("query" to query))
 
-    fun schema(): String =  // 캐시됨 (24시간)
-        callTool("get_schema", emptyMap())
+    override fun schema(): String =  // db://schema Resource, 프로세스 수명 동안 캐시
+        cachedSchema.get() ?: readTextResource(SCHEMA_URI).also { cachedSchema.set(it) }
 }
 ```
 
@@ -337,6 +337,11 @@ npm run build
 벤치마크를 변경했다면 같은 데이터셋·모델·설정·반복 횟수로 기준선과 후보를 모두 측정하고,
 문항별 원시 JSON 결과를 보존해야 합니다.
 
+CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실행 경로인
+`agent-app`/`mcp-server`/`client`/`eval`만 검증합니다. `air-server`,
+`agent-app-go`/`mcp-server-go`는 선택형 비교 구현이라 CI 대상이 아니며, 각자의
+오라클 테스트(`agent-app-go test`, `air-server`의 `npm test`)로 별도 검증합니다.
+
 ## 문서 안내
 
 | 문서 | 내용 |
@@ -345,6 +350,8 @@ npm run build
 | [BENCHMARK.md](./BENCHMARK.md) | 벤치마크 결과 및 재현 방법 |
 | [최종 재현 벤치마크](./docs/research/CONTEST_FINAL_BENCHMARK.md) | 복합 질문·TACC·AIR/Spring AI·장애 주입 판정 |
 | [AIR 프레임워크 피드백](./docs/research/AIR_FRAMEWORK_FEEDBACK.md) | AIR 비교 결과와 운영 피드백 |
+| [3-way 벤치마크·baseline 정확도 개선](./eval/bench-results/README.md) | Go/Ktor 성능 비교, baseline 답변 정확도 40%→90%대 개선과 30→93→302→홀드아웃 일반화 검증 |
+| [실험 원시 결과 아카이브 안내](./eval/results/README.md) | 개별 실험 원시 JSON과 관련 연구 문서 매핑 |
 | [레드팀 보안 검토](./docs/security/RED_TEAM_REVIEW_2026-08-13.md) | 애플리케이션 보안 검토와 차단 항목 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 기여자가 먼저 확인할 핵심 규칙 |
 | [이슈와 PR 운영 절차](./docs/contributing/WORKFLOW.md) | 작업 유형, 브랜치, 리뷰 게이트, PR 절차 |

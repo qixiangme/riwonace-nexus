@@ -2,6 +2,20 @@
 
 이슈 [#100](https://github.com/qixiangme/DB-MCP/issues/100) (추적), [#101](https://github.com/qixiangme/DB-MCP/issues/101) (Go), [#102](https://github.com/qixiangme/DB-MCP/issues/102) (Ktor)에서 진행한 migration 실험의 벤치마크 하네스와 원시 결과.
 
+이 디렉토리에는 두 계열의 실험이 섞여 있다.
+
+1. **이 문서(startup/RSS/latency/안정성)**: 세 구현의 성능·자원 사용량 비교.
+   `{impl}-2.json`, `{impl}-isolated.json`, `go-first.json`, `{impl}-equivalence.json`.
+2. **baseline 답변 정확도 개선과 그 일반화 검증**: 30문항 오답 분석 → 93문항 →
+   302문항(문체 다양화) → 홀드아웃 298문항(완전히 다른 가상 회사 데이터)까지
+   네 단계로 검증한 전체 과정은 별도 문서
+   [`private-eval-results.md`](./private-eval-results.md)에 있다. 여기 있는
+   `baseline-*.json`, `go-4b.json`, `ktor-4b.json`, `*-generalization*.json`,
+   `holdout-results.json`, `naive-llm-30-results.json` 등은 전부 그 문서가
+   인용하는 원시 결과 파일이며, 생성기 스크립트(`generalization_gen.py`,
+   `generalization_gen_holdout.py`, `generate_holdout_data.py`,
+   `dump_full_context.py`, `naive_llm_eval.py`)도 함께 있다.
+
 ## 가설
 
 같은 MCP 아키텍처(라우팅·NL2SQL·caching 정책 동일, 신규 기능 없음)를 Go/Ktor로
