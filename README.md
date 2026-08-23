@@ -176,10 +176,7 @@ CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실
 | [ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md) | AIR/Go 대체 구현의 배경, 실행 방법, 실측 비교, 권장 사항·위험 |
 | [BENCHMARK.md](./BENCHMARK.md) | 벤치마크 결과 및 재현 방법 |
 | [최종 재현 벤치마크](./docs/research/CONTEST_FINAL_BENCHMARK.md) | 복합 질문·TACC·AIR/Spring AI·장애 주입 판정 |
-| [AIR 프레임워크 피드백](./docs/research/AIR_FRAMEWORK_FEEDBACK.md) | AIR 비교 결과와 운영 피드백 |
-| [3-way 벤치마크·baseline 정확도 개선](./eval/bench-results/README.md) | Go/Ktor 성능 비교, baseline 답변 정확도 40%→90%대 개선과 30→93→302→홀드아웃 일반화 검증 |
 | [실험 원시 결과 아카이브 안내](./eval/results/README.md) | 개별 실험 원시 JSON과 관련 연구 문서 매핑 |
-| [레드팀 보안 검토](./docs/security/RED_TEAM_REVIEW_2026-08-13.md) | 애플리케이션 보안 검토와 차단 항목 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 기여자가 먼저 확인할 핵심 규칙 |
 | [이슈와 PR 운영 절차](./docs/contributing/WORKFLOW.md) | 작업 유형, 브랜치, 리뷰 게이트, PR 절차 |
 | [벤치마크 무결성 정책](./docs/contributing/BENCHMARK_POLICY.md) | 데이터 누수 방지, 재현 조건, 최소 통과 기준 |

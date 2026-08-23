@@ -14,6 +14,3 @@
 | [`docs/research/KEYWORDLESS_ROUTING_RESULTS.md`](../../docs/research/KEYWORDLESS_ROUTING_RESULTS.md) | 키워드 없는 질문의 라우팅 정확도(`keyword-gap-*.json`, `full-*-semantic-gemma4b-*.json`) |
 | [`docs/research/NL2SQL_SCHEMA_GROUNDING_RESULTS.md`](../../docs/research/NL2SQL_SCHEMA_GROUNDING_RESULTS.md) | 스키마 링킹 전후 NL2SQL 정확도(`schema-grounding-*.json`) |
 | [`docs/research/CONTEST_FINAL_BENCHMARK.md`](../../docs/research/CONTEST_FINAL_BENCHMARK.md) | 복합 질문·TACC·AIR/Spring AI·장애 주입 최종 판정(`final-*`, `final-*-<commit>/`) |
-
-`eval/bench-results/`의 실험(3-way 언어별 벤치마크, baseline 답변 정확도 개선과
-그 일반화 검증)은 별도 디렉토리이며 [`eval/bench-results/README.md`](../bench-results/README.md)를 참고한다.
