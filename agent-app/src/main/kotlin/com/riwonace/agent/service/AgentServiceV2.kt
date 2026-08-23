@@ -467,7 +467,7 @@ class AgentServiceV2(
             val varName = match.groupValues[1]
             val value = results[varName]
             val replacement = when (value) {
-                is List<*> -> (value as? List<ContextItem>)?.joinToString(", ") { it.text.take(50) } ?: ""
+                is List<*> -> value.filterIsInstance<ContextItem>().joinToString(", ") { it.text.take(50) }
                 else -> value?.toString() ?: ""
             }
             resolved = resolved.replace(match.value, replacement)
