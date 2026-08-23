@@ -1,5 +1,8 @@
 # MCP 지능형 데이터 플랫폼
 
+[![CI](https://github.com/qixiangme/DB-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/qixiangme/DB-MCP/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 사내의 문서, 관계형 테이블, 지식 그래프를 한곳에서 조회하고 일상어 질문에 근거 있는 답을
 제공하는 **온프레미스 AI 데이터 검색 플랫폼**입니다. 외부 AI API 대신 로컬 Ollama 모델을
 사용하고, 데이터 접근은 MCP(Model Context Protocol) 도구로 표준화합니다.
@@ -180,9 +183,13 @@ CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 기여자가 먼저 확인할 핵심 규칙 |
 | [이슈와 PR 운영 절차](./docs/contributing/WORKFLOW.md) | 작업 유형, 브랜치, 리뷰 게이트, PR 절차 |
 | [벤치마크 무결성 정책](./docs/contributing/BENCHMARK_POLICY.md) | 데이터 누수 방지, 재현 조건, 최소 통과 기준 |
+| [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) | 커뮤니티 행동 강령 |
+| [SECURITY.md](./SECURITY.md) | 취약점 제보 절차, 알려진 보안 한계 |
+| [LICENSE](./LICENSE) | MIT 라이선스 |
 
 ## 기여하기
 
 기여를 시작하기 전에 [CONTRIBUTING.md](./CONTRIBUTING.md)를 읽어 주세요. 이슈 등록,
 브랜치 작성, 테스트와 벤치마크, PR 템플릿, Draft·Ready·Close 판정 기준을 한곳에
-정리했습니다. 보안 취약점은 공개 이슈 대신 ichangmin380@gmail.com 으로 제보 부탁드립니다
+정리했습니다. 이 프로젝트에 참여하는 모든 사람은 [행동 강령](./CODE_OF_CONDUCT.md)을
+따라야 합니다. 보안 취약점은 [SECURITY.md](./SECURITY.md)의 절차에 따라 제보해 주세요.
