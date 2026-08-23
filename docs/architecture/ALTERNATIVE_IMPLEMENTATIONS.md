@@ -99,10 +99,7 @@ cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
 
 ### 실측 비교와 결론
 
-startup, RSS, latency, 동시성, 답변 정확도 실측은
-[`eval/bench-results/README.md`](../../eval/bench-results/README.md)와
-[`eval/bench-results/private-eval-results.md`](../../eval/bench-results/private-eval-results.md)에
-정리했다. 요약하면:
+startup, RSS, latency, 동시성, 답변 정확도를 실측해 비교했다. 요약하면:
 
 | 지표 | Spring AI (baseline) | Go |
 |---|---:|---:|
@@ -120,8 +117,8 @@ startup, RSS, latency, 동시성, 답변 정확도 실측은
   macOS + Docker Desktop VM + CPU 추론 환경의 Ollama 처리량 변동성임을 확정했다.
   이 결론은 로컬 환경에 한정되며 서버급 GPU 추론 인프라에서는 재검증이 필요하다.
 - **baseline의 답변 정확도 버그 수정은 Go/Ktor 포팅에는 아직 반영되지 않았다.**
-  `private-eval-results.md`에 기록된 대로, gemma3:4b 기준 버그 수정 전 상태에서
-  Go/Ktor도 baseline과 동일하게 60.0%/90.0%였다 — 즉 버그가 세 구현 모두에
+  gemma3:4b 기준 버그 수정 전 상태에서 Go/Ktor도 baseline과 동일하게
+  60.0%/90.0%였다 — 즉 버그가 세 구현 모두에
   동일하게 존재했을 가능성이 높다. baseline에서 고친 것(AnswerabilityGate 오판,
   DeterministicSqlPlanner v2 미연결, 라우팅 키워드 누락 등)을 Go/Ktor 소스에도
   반영하는 작업은 아직 하지 않았다.
