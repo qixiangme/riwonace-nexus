@@ -63,3 +63,23 @@ go test ./...
 수동 검증했다: `/api/tools`, `/api/v2/status`, 그리고 각 라우트별 `/api/chat/v2`
 호출이 정상적인 tool call 순서·컨텍스트 소스·모델 에스컬레이션과 함께 응답함을
 확인했다.
+
+## 권장 사항
+
+startup(5배)·RSS(13배) 이득은 명확하지만, **아직 baseline(Kotlin/Spring AI)의
+답변 정확도 버그 수정 8건이 이 포팅에 반영되지 않았다.** 다중 인스턴스
+스케일 아웃이나 콜드스타트가 실제 제약이 아니라면 baseline을 기본으로
+유지하는 것을 권장한다. 자세한 실측 비교와 판단 근거는 저장소 루트
+[`docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md`](../docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)를 참고한다.
+
+## 위험 / 알려진 한계
+
+- **정확도 버그 미반영**: baseline에서 고친 `AnswerabilityGate` 클레임 오판,
+  `DeterministicSqlPlanner` v2 미연결, 라우팅 키워드 누락 등은 이 Go 포팅에
+  아직 반영되지 않았다. baseline과 같은 조건(`gemma3:4b`)에서 재측정하지
+  않았으므로 지금 이 포팅으로 전환하면 baseline에서 이미 해결된 오답 패턴을
+  다시 겪을 수 있다.
+- **표현 다양성 검증 부족**: baseline은 302문항(문체 3~4배 변형) +
+  홀드아웃 298문항(완전히 다른 데이터셋)까지 검증했지만, 이 포팅은 원본
+  오라클 테스트와 수동 end-to-end 검증까지만 거쳤다.
+- **CI 미포함**: 루트 Gradle CI 대상이 아니다. `go test ./...`로만 자체 검증된다.

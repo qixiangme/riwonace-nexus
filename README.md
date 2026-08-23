@@ -86,192 +86,17 @@ MCP 서버가 제공하는 도구는 다음과 같습니다.
 | `run_sql` | 검증을 통과한 읽기 전용 SELECT/WITH 실행 |
 | `kg_search` | 주어–관계–목적어 형태의 지식 그래프 탐색 |
 
-## MCP 아키텍처
+## MCP 아키텍처와 대체 구현
 
-이 프로젝트는 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)을 사용하여
-에이전트와 데이터 도구 사이의 통신을 표준화합니다.
+에이전트와 데이터 도구 서버는 [Model Context Protocol](https://modelcontextprotocol.io/)로
+통신한다. 통신 흐름·도구별 입출력·보안 계층 같은 상세 계약은
+[MCP_CONTRACT.md](./docs/architecture/MCP_CONTRACT.md)에 정리했다.
 
-### MCP 통신 흐름
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                         agent-app (:8080)                           │
-│  ┌──────────────┐    ┌──────────────┐    ┌───────────────────────┐  │
-│  │ ChatController│───▶│ AgentService │───▶│ McpGateway            │  │
-│  │ POST /api/chat│    │ 라우팅/NL2SQL │    │ MCP 클라이언트 래퍼   │  │
-│  └──────────────┘    └──────────────┘    └───────────┬───────────┘  │
-└──────────────────────────────────────────────────────┼──────────────┘
-                                                       │ MCP/SSE
-                                                       ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        mcp-server (:8081)                           │
-│  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                      RetrievalTools                          │   │
-│  │  ┌─────────────┐ ┌───────────┐ ┌─────────┐ ┌───────────────┐ │   │
-│  │  │vector_search│ │get_schema │ │ run_sql │ │   kg_search   │ │   │
-│  │  │ 문서 검색   │ │ 스키마조회│ │ SQL실행 │ │ 그래프 탐색   │ │   │
-│  │  └──────┬──────┘ └─────┬─────┘ └────┬────┘ └───────┬───────┘ │   │
-│  └─────────┼──────────────┼────────────┼──────────────┼─────────┘   │
-│            │              │            │              │             │
-│            ▼              ▼            ▼              ▼             │
-│  ┌──────────────┐  ┌────────────┐  ┌─────────┐  ┌────────────┐      │
-│  │  VectorStore │  │JdbcTemplate│  │SqlGuard │  │JdbcTemplate│      │
-│  │  (pgvector)  │  │  (schema)  │  │(보안검증)│  │ (kg_triples)│     │
-│  └──────┬───────┘  └─────┬──────┘  └────┬────┘  └─────┬──────┘      │
-└─────────┼────────────────┼──────────────┼─────────────┼─────────────┘
-          │                │              │             │
-          ▼                ▼              ▼             ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    PostgreSQL 16 + pgvector                         │
-│  ┌────────────────┐  ┌─────────────┐  ┌────────────────────────┐    │
-│  │  vector_store  │  │ employees   │  │      kg_triples        │    │
-│  │  (문서 임베딩) │  │ departments │  │  (subject, predicate,  │    │
-│  │                │  │ projects    │  │   object)              │    │
-│  └────────────────┘  └─────────────┘  └────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### MCP 서버 설정
-
-`mcp-server`는 Spring AI MCP Server로 구현되어 있으며, 다음과 같이 설정됩니다:
-
-```yaml
-# mcp-server/src/main/resources/application.yml
-spring:
-  ai:
-    mcp:
-      server:
-        name: riwonace-data-platform
-        version: 1.0.0
-        type: SYNC    # 동기 MCP 서버
-```
-
-### MCP 도구 상세
-
-| 도구 | 입력 | 출력 | 보안 |
-|---|---|---|---|
-| `vector_search` | `query: String`, `topK?: Int` | 유사 문서 목록 (source, score, text) | 출력 크기 제한 (4KB) |
-| `get_schema` | - | 테이블/컬럼 정보 + 외래키 + 값 힌트 | 출력 크기 제한 (8KB) |
-| `run_sql` | `sql: String` | 실행 결과 JSON (rows) | SqlGuard 검증, SELECT만 허용 |
-| `kg_search` | `query: String` | 관계 트리플 목록 | 2홉 확장, 40개 제한 |
-
-### MCP 클라이언트 (McpGateway)
-
-`agent-app`에서 MCP 서버를 호출하는 게이트웨이:
-
-```kotlin
-// agent-app/src/main/kotlin/com/riwonace/agent/mcp/McpGateway.kt
-@Component
-class McpGateway(private val clients: List<McpSyncClient>) : DataToolGateway {
-
-    override fun vectorSearch(query: String, topK: Int): String =
-        callTool("vector_search", mapOf("query" to query, "topK" to topK))
-
-    override fun runSql(sql: String): String =
-        callTool("run_sql", mapOf("sql" to sql))
-
-    override fun kgSearch(query: String): String =
-        callTool("kg_search", mapOf("query" to query))
-
-    override fun schema(): String =  // db://schema Resource, 프로세스 수명 동안 캐시
-        cachedSchema.get() ?: readTextResource(SCHEMA_URI).also { cachedSchema.set(it) }
-}
-```
-
-### 보안 계층
-
-MCP 도구는 다음 보안 계층을 거칩니다:
-
-1. **SqlGuard**: 토큰화 기반 SQL 검증
-   - SELECT/WITH만 허용, DML/DDL 차단
-   - 위험 함수 차단 (pg_sleep, pg_read_file 등)
-   - LIMIT 자동 추가 (기본 50)
-
-2. **ToolResponseEncoder**: 출력 보호
-   - 최대 출력 크기 제한
-   - 에러 메시지 일반화 (내부 정보 노출 방지)
-
-3. **경로 검증** (IngestController)
-   - 상위 디렉토리 탈출 방지
-   - 심볼릭 링크 검사
-
-## AIR와 Spring AI 구현이 모두 있는 이유
-
-이 프로젝트의 핵심 경계는 특정 프레임워크가 아니라 MCP 도구 계약입니다.
-
-- **Spring AI `mcp-server`가 기본 구현**입니다. Gradle 멀티모듈 빌드, Spring AI MCP,
-  Ollama, pgvector가 통합되어 있고 데이터 적재와 자동화 테스트를 담당합니다.
-- **AIR `air-server`는 선택형 비교 구현**입니다. Node.js의 AIR MCP 프레임워크로 같은
-  도구 이름을 노출해, `agent-app` 코드를 바꾸지 않고 서버 URL만 교체할 수 있음을 검증합니다.
-- 두 구현을 둠으로써 프로토콜 호환성, 프레임워크 종속성, 성능과 동작 차이를 같은
-  클라이언트에서 비교할 수 있습니다.
-- AIR는 현재 Gradle 기본 빌드와 기본 실행 경로에 포함되지 않으며, 벡터 데이터 적재는
-  Spring AI 서버에서 먼저 수행해야 합니다.
-
-AIR 구현으로 전환할 때는 Spring AI 서버로 데이터를 한 번 적재한 뒤 다음과 같이 실행합니다.
-
-```bash
-npm ci --prefix air-server
-npm --prefix air-server start
-
-# 별도 터미널
-MCP_SERVER_URL=http://localhost:8082 ./gradlew :agent-app:bootRun
-```
-
-기본 Spring AI 구현으로 돌아가려면 `MCP_SERVER_URL`을 생략하거나
-`http://localhost:8081`로 설정합니다.
-
-키워드가 전혀 걸리지 않는 질문에서 90%대 라우팅을 재현한 설정은 다음과 같습니다.
-
-```bash
-OLLAMA_MODEL=gemma3:4b ROUTER_FALLBACK=semantic-ai ./gradlew :agent-app:bootRun
-```
-
-공개셋 93.3%, 키워드 무교집합 보류셋 96.7%이며 100%는 아닙니다. 평가 범위와 원시 결과는
-[키워드 없는 라우팅 실험 결과](./docs/research/KEYWORDLESS_ROUTING_RESULTS.md)를 참고하세요.
-Company-X 전체 스택에서는 공식 원문 답변 66.7%, 키워드 제거 답변 50.0%를 측정했습니다.
-
-## Go 구현이 별도로 있는 이유
-
-AIR가 "다른 프레임워크로 같은 MCP 계약을 구현"하는 실험이라면, Go 포팅은 "다른
-언어/런타임으로 같은 아키텍처를 구현"하는 실험입니다.
-
-- **`mcp-server-go`/`agent-app-go`는 `mcp-server`/`agent-app`의 1:1 포팅**입니다.
-  라우팅·NL2SQL·SQL 검증·caching 정책·MCP 도구 계약을 임의로 개선하지 않고 동일하게
-  재현합니다. 공식 [Go MCP SDK](https://github.com/modelcontextprotocol/go-sdk)를 사용합니다.
-- Spring AI 구현이 여전히 기본이며 자동화 테스트·데이터 적재를 담당합니다. Go 구현은
-  Gradle 기본 빌드에 포함되지 않고, 별도 Go 모듈로 독립 실행됩니다.
-- baseline 대비 실측 비교(startup, RSS, latency, 동시성, 답변 정확도)는
-  [`eval/bench-results/README.md`](./eval/bench-results/README.md)에 정리했습니다. 결론을
-  요약하면 startup/메모리 사용량은 Go가 크게 낮지만, 로컬 Ollama 추론 인프라의 처리량
-  변동성이 병목인 워크로드에서는 언어 차이가 체감 latency를 지배하지 않습니다(원인은
-  `pprof` CPU 프로파일과 애플리케이션을 배제한 대조 실험으로 확인).
-
-### 빌드와 실행
-
-Go 1.21+ 가 필요합니다. 범용 빌드 스크립트로 현재 플랫폼용 바이너리를 만들거나,
-`go run`으로 바로 실행할 수 있습니다.
-
-```bash
-# 현재 플랫폼용 바이너리를 bin/에 생성
-./scripts/build-go.sh
-
-# macOS/Linux/Windows 크로스 컴파일 (bin/에 8개 바이너리 생성)
-./scripts/build-go.sh --all
-
-# 또는 go run으로 바로 실행 (mcp-server 먼저, agent-app 나중)
-cd mcp-server-go && DATABASE_URL=postgres://riwonace:riwonace@localhost:5433/riwonace \
-  OLLAMA_BASE_URL=http://localhost:11434 SERVER_PORT=8081 go run ./...
-
-# 별도 터미널
-cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
-  OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma3:1b SERVER_PORT=8080 go run .
-```
-
-기본 Spring AI 구현과 마찬가지로 `docker-compose.yml`의 `postgres`(5433)·`ollama`(11434)에
-연결합니다. 벡터 데이터는 Spring AI `mcp-server`로 먼저 적재해야 합니다(AIR와 동일한 제약).
-세부 포팅 노트는 [`mcp-server-go/README.md`](./mcp-server-go/README.md),
-[`agent-app-go/README.md`](./agent-app-go/README.md)를 참고하세요.
+기본 구현(Spring AI) 외에 같은 계약을 다른 프레임워크(Node.js AIR, `air-server`)와
+다른 언어(Go, `mcp-server-go`/`agent-app-go`)로 재현한 선택형 비교 구현이 있다.
+왜 두 실험을 만들었는지, 실측 비교 결과와 권장 사항은
+[ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)에
+정리했다.
 
 ## 빠른 시작
 
@@ -347,6 +172,8 @@ CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실
 | 문서 | 내용 |
 |---|---|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 전체 구조, 요청 처리 흐름, 주요 설계 결정 |
+| [MCP_CONTRACT.md](./docs/architecture/MCP_CONTRACT.md) | MCP 통신 흐름, 도구별 입출력, 보안 계층 |
+| [ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md) | AIR/Go 대체 구현의 배경, 실행 방법, 실측 비교, 권장 사항·위험 |
 | [BENCHMARK.md](./BENCHMARK.md) | 벤치마크 결과 및 재현 방법 |
 | [최종 재현 벤치마크](./docs/research/CONTEST_FINAL_BENCHMARK.md) | 복합 질문·TACC·AIR/Spring AI·장애 주입 판정 |
 | [AIR 프레임워크 피드백](./docs/research/AIR_FRAMEWORK_FEEDBACK.md) | AIR 비교 결과와 운영 피드백 |

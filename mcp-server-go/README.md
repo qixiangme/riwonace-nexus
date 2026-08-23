@@ -45,3 +45,19 @@ go test ./...
 - `kg_triples` 테이블은 `companyx-dataset-v1.0/sql/01-schema.sql`이 아니라
   `db/init.sql`이 정의하며, 실 데이터는 `companyx-dataset-v1.0/graph/load-triples.sql`로
   적재된다.
+
+## 권장 사항
+
+startup(5배)·RSS(13배) 이득은 명확하지만, **baseline(Kotlin/Spring AI)의
+`kg_search` predicate 체이닝·PRODUCT/CLIENT 패턴 인식 버그 수정이 이 포팅에
+반영되지 않았다.** 자세한 실측 비교와 판단 근거는 저장소 루트
+[`docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md`](../docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)를 참고한다.
+
+## 위험 / 알려진 한계
+
+- **`kg_search` 로직 버그 미반영**: baseline의 `mcp-server`는 홀드아웃 검증
+  과정에서 predicate 체이닝 부재("부서장이 담당하는 고객사" 같은 중간 엔티티가
+  필요한 질문에서 부정확한 결과)와 `Product-`/`Client-` 리터럴 접두사에 고정된
+  엔티티 인식 패턴을 고쳤다. 이 Go 포팅은 아직 원래 버전의 로직을 그대로
+  재현하고 있어 같은 문제를 그대로 가지고 있을 가능성이 높다.
+- **CI 미포함**: 루트 Gradle CI 대상이 아니다. `go test ./...`로만 자체 검증된다.
