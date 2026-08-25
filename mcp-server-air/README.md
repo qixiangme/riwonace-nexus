@@ -1,10 +1,11 @@
 # mcp-server-air
 
-`mcp-server`(Kotlin/Spring AI)의 선택형 대체 구현. 같은 언어(Kotlin)나 아키텍처를
-바꾸는 게 아니라 **프레임워크만** [AIR](https://github.com/airmcp-dev/air) MCP
+`mcp-server-spring`과 짝을 이루는 중간 성능대 구현체다. agent-app은 Spring AI를
+그대로 두고 mcp-server만 [AIR](https://github.com/airmcp-dev/air) MCP
 프레임워크(Node.js)로 교체해, MCP 도구 계약이 실제로 프레임워크에 독립적인지
-검증한다. 배경과 다른 대체 구현(Go 포팅)과의 비교는 저장소 루트의
-[`docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md`](../docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)를
+검증한다. 리소스 사용량은 Spring AI 대비 1.66배 적고, 정확도는 동등하거나
+근소하게 높다. 배경과 다른 구현체(기본 구현인 Go)와의 비교는 저장소 루트의
+[`docs/architecture/IMPLEMENTATIONS.md`](../docs/architecture/IMPLEMENTATIONS.md)를
 참고한다.
 
 ## 제공 계약

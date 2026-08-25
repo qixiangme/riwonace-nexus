@@ -48,14 +48,15 @@ AnswerabilityGate ── 근거가 부족한 주장을 차단
 
 | 모듈 | 책임 | 기본 실행 |
 |---|---|---|
-| `agent-app` | 질문 분석, 라우팅, 계획, 답변 | `:8080` |
-| `mcp-server` | Spring AI MCP 도구·리소스, PostgreSQL 접근 | `:8081` |
-| `air-server` | 같은 MCP 계약의 선택형 Node/AIR 구현 | `:8082` |
+| `agent-app-go` | 질문 분석, 라우팅, 계획, 답변 | `:8080` |
+| `mcp-server-go` | Go MCP 도구·리소스, PostgreSQL 접근 | `:8081` |
+| `agent-app-spring` / `mcp-server-spring` | 벡터 데이터 최초 적재, 대용량 데이터용 Kotlin/Spring AI 구현 | `:8080` / `:8081` |
+| `mcp-server-air` | agent-app-spring과 짝을 이루는 Node/AIR 구현, 중간 성능대 | `:8082` |
 | PostgreSQL + pgvector | 관계형·벡터·그래프 저장 | `:5433` |
 | Ollama | 로컬 답변·임베딩 모델 | `:11434` |
 
-기본 경로는 `agent-app → mcp-server`입니다. AIR은 호환성 비교용이며, 서버 URL만 바꿔
-동일 에이전트에서 비교할 수 있습니다.
+기본 경로는 `agent-app-go → mcp-server-go`입니다. 세 구현체의 실측 비교는
+[IMPLEMENTATIONS.md](./IMPLEMENTATIONS.md)를 참고합니다.
 
 ## 결과를 읽는 법
 
@@ -75,9 +76,18 @@ AnswerabilityGate ── 근거가 부족한 주장을 차단
 docker compose up -d
 docker exec riwonace-ollama ollama pull gemma3:1b
 docker exec riwonace-ollama ollama pull nomic-embed-text
+
+# 벡터 데이터 최초 적재(Spring AI mcp-server만 이 경로를 가진다, 최초 1회)
 ./gradlew :mcp-server-spring:bootRun
+# 적재 완료 후 Ctrl+C로 종료
+
+# 기본 Go 구현 실행
+cd mcp-server-go && DATABASE_URL=postgres://riwonace:riwonace@localhost:5433/riwonace \
+  OLLAMA_BASE_URL=http://localhost:11434 SERVER_PORT=8081 go run ./...
 # 다른 터미널
-./gradlew :agent-app-spring:bootRun
+cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
+  OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma3:1b SERVER_PORT=8080 \
+  ROUTER_FALLBACK=semantic-ai go run .
 ```
 
 간단한 확인:

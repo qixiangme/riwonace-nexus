@@ -4,7 +4,7 @@
 에이전트(`agent-app`)와 데이터 도구 서버(`mcp-server`) 사이의 통신을 표준화한다.
 이 문서는 그 계약의 통신 흐름, 도구별 입출력, 보안 계층을 정리한다. 대체 구현
 (AIR, Go)이 이 계약을 어떻게 재현하는지는
-[ALTERNATIVE_IMPLEMENTATIONS.md](./ALTERNATIVE_IMPLEMENTATIONS.md)를 참고한다.
+[IMPLEMENTATIONS.md](./IMPLEMENTATIONS.md)를 참고한다.
 
 ## MCP 통신 흐름
 
