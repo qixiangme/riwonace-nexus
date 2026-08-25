@@ -99,3 +99,85 @@ func TestPlan_RegisteredClientsWithYearBuildsYearBoundary(t *testing.T) {
 		t.Fatalf("got %q", sql)
 	}
 }
+
+// 아래는 baseline(Kotlin)에서 302문항 재검증과 홀드아웃(완전히 다른 데이터셋)
+// 검증 과정에서 추가된 패턴을 Go 포팅에도 반영한 회귀 테스트다.
+
+func TestPlan_LowestDepartmentSalaryDoesNotMatchHighestPattern(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	sql := mustPlan(t, p, "평균 연봉이 가장 낮은 부서는 어디야?")
+	if !strings.Contains(sql, "ORDER BY average_salary ASC") {
+		t.Fatalf("got %q, want ASC order (not the highest-salary DESC pattern)", sql)
+	}
+}
+
+func TestPlan_DepartmentHeadcountDoesNotCollideWithEmployeeListPattern(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	sql := mustPlan(t, p, "경영지원팀 인원수 알려줘")
+	if !strings.Contains(sql, "count(*)") {
+		t.Fatalf("got %q", sql)
+	}
+	if !strings.Contains(sql, "e.dept_id = d.id") {
+		t.Fatalf("got %q", sql)
+	}
+}
+
+func TestPlan_MostCancelledContractProduct(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	sql := mustPlan(t, p, "해지된 계약이 가장 많은 제품은?")
+	if !strings.Contains(sql, "status = 'cancelled'") {
+		t.Fatalf("got %q", sql)
+	}
+	if !strings.Contains(sql, "ORDER BY cancelled_count DESC") {
+		t.Fatalf("got %q", sql)
+	}
+}
+
+func TestPlan_CategoryRegionCompanySizeTotalSales(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	if sql := mustPlan(t, p, "클라우드 카테고리 제품의 총 매출은 얼마야?"); !strings.Contains(sql, "p.category = 'cloud'") {
+		t.Fatalf("got %q", sql)
+	}
+	if sql := mustPlan(t, p, "대구 지역 매출 총액은 얼마야?"); !strings.Contains(sql, "region = '대구'") {
+		t.Fatalf("got %q", sql)
+	}
+	if sql := mustPlan(t, p, "enterprise 규모 고객사들의 총 매출은 얼마야?"); !strings.Contains(sql, "company_size = 'enterprise'") {
+		t.Fatalf("got %q", sql)
+	}
+}
+
+func TestPlan_SupportTicketCountAcceptsShortNumberWordNotJustNumberEun(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	sql := mustPlan(t, p, "Product-C1 티켓 수 알려줘")
+	if !strings.Contains(sql, "FROM support_tickets t JOIN products p") {
+		t.Fatalf("got %q", sql)
+	}
+}
+
+func TestPlan_GenericCodePatternRecognizesNonCompanyXNamingScheme(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	// "Nova-B2"는 Product-/Client- 리터럴 접두사가 없는 임의 코드형 명칭이다 —
+	// 홀드아웃(완전히 다른 회사 데이터) 검증에서 이 패턴이 인식되지 않던 버그를 고쳤다.
+	sql := mustPlan(t, p, "Nova-B2 티켓 수 알려줘")
+	if !strings.Contains(sql, "p.name = 'Nova-B2'") {
+		t.Fatalf("got %q", sql)
+	}
+}
+
+func TestPlan_GenericCodeWithClientHintWordResolvesAsClientNotProduct(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	sql := mustPlan(t, p, "Nova-Client-9 고객사 총 매출")
+	if !strings.Contains(sql, "s.client_id = c.id") {
+		t.Fatalf("got %q, want client-side join for a name matched via a client hint word", sql)
+	}
+}
+
+func TestPlan_LiteralClientPrefixIsNotOverriddenByGenericCodeFallback(t *testing.T) {
+	p := &DeterministicSqlPlanner{}
+	// 회귀 방지: literalClient가 이미 잡히면 genericCode fallback이 product를
+	// 잘못 채워 이 케이스가 product 분기로 새면 안 된다(과거 실제로 발생했던 버그).
+	sql := mustPlan(t, p, "Client-Q 총 매출")
+	if !strings.Contains(sql, "s.client_id = c.id") {
+		t.Fatalf("got %q", sql)
+	}
+}

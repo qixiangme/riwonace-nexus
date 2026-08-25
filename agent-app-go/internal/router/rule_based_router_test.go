@@ -131,3 +131,42 @@ func TestRuleBasedRouter_CompositionCueAugmentsSingleRuleWithFallbackMultiRoute(
 		t.Fatalf("got %v", got)
 	}
 }
+
+// 아래는 302문항/홀드아웃 검증 과정에서 발견된 baseline(Kotlin) 회귀 수정을
+// Go 포팅에도 반영한 테스트다.
+
+func TestRuleBasedRouter_EmployeeKeywordRemovedDoesNotForceSqlOnGraphQuestion(t *testing.T) {
+	// "직원"은 SQL/GRAPH 양쪽에 다 등장하는 모호한 키워드라 sqlKeywords에서 뺐다.
+	// 이 질문은 실제로는 GRAPH(부서 소속 관계)이고, "직원" 하나만으로 SQL이
+	// 확정되어 semantic-ai fallback이 막히면 안 된다.
+	called := false
+	router := &RuleBasedRouter{Fallback: fallbackFunc(func(string) []Route {
+		called = true
+		return []Route{RouteGraph}
+	})}
+	got := router.Route("경영지원팀에서 일하는 직원들은 누구입니까?")
+	if !called {
+		t.Fatal("expected fallback to be consulted since 직원 alone must not force SQL")
+	}
+	if !reflect.DeepEqual(got, []Route{RouteGraph}) {
+		t.Fatalf("got %v", got)
+	}
+}
+
+func TestRuleBasedRouter_DepartmentHeadKeywordRoutesToGraph(t *testing.T) {
+	if !contains((&RuleBasedRouter{}).Route("클라우드사업부 부서장은 누구인가요?"), RouteGraph) {
+		t.Fatal("expected GRAPH route for 부서장 keyword")
+	}
+}
+
+func TestRuleBasedRouter_DepartmentNameOverlapWithVectorKeywordDoesNotForceVector(t *testing.T) {
+	// "인프라운영팀"의 "운영"이 vectorKeywords와 우연히 겹치는 케이스. GRAPH 키워드
+	// ("담당")가 이미 있으므로 라우팅 결과에 VECTOR가 섞여 들어가면 안 된다.
+	got := (&RuleBasedRouter{}).Route("인프라운영팀 소속 직원이 담당하는 고객사는?")
+	if !contains(got, RouteGraph) {
+		t.Fatalf("expected GRAPH route, got %v", got)
+	}
+	if contains(got, RouteVector) {
+		t.Fatalf("department name token '운영' must not force VECTOR, got %v", got)
+	}
+}

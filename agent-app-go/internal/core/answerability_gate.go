@@ -163,11 +163,13 @@ func extractSupportedClaims(evidence []agentcontext.ContextItem, requiredClaims 
 	var supported []string
 	for _, claim := range requiredClaims {
 		switch {
-		case claim == "person_identity" && anyHasPersonInfo(evidence):
+		case claim == "person_identity" && (anyHasPersonInfo(evidence) || hasGraphSource):
 			supported = append(supported, claim)
 		case claim == "time_info" && timeInfoRe.MatchString(combinedText):
 			supported = append(supported, claim)
-		case claim == "location_info" && locationInfoRe.MatchString(combinedText):
+		// "어디"는 지명(서울시, 강남구)뿐 아니라 그래프 엔티티(Client-X)나 고객사/부서명을
+		// 묻는 경우도 많다 — knowledge-graph/sql 근거가 있으면 위치 클레임도 지원된 것으로 본다.
+		case claim == "location_info" && (locationInfoRe.MatchString(combinedText) || hasSQLSource || hasGraphSource):
 			supported = append(supported, claim)
 		case claim == "quantity_value" && quantityRe.MatchString(combinedText):
 			supported = append(supported, claim)
@@ -175,7 +177,10 @@ func extractSupportedClaims(evidence []agentcontext.ContextItem, requiredClaims 
 			supported = append(supported, claim)
 		case claim == "aggregated_value" && hasSQLSource:
 			supported = append(supported, claim)
-		case strings.HasPrefix(claim, "comparison_item_") && len(evidence) >= 2:
+		// "A vs B"류 명시적 비교는 근거가 2건 이상이어야 하지만, "가장 낮은/높은 X"
+		// 같은 최상급 질문은 SQL이 GROUP BY+ORDER BY+LIMIT 1로 이미 비교를 마치고
+		// 단일 행만 반환한다 — 이 경우 SQL/GRAPH 근거 자체가 비교 결과이므로 충족된다.
+		case strings.HasPrefix(claim, "comparison_item_") && (len(evidence) >= 2 || hasSQLSource || hasGraphSource):
 			supported = append(supported, claim)
 		case claim == "concept_definition" && len([]rune(combinedText)) > 100:
 			supported = append(supported, claim)

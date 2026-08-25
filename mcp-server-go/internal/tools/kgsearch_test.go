@@ -68,3 +68,48 @@ func TestPlanKgSearch_TokensCappedAtFour(t *testing.T) {
 		t.Fatalf("expected at most 4 tokens, got %d: %v", len(plan.Tokens), plan.Tokens)
 	}
 }
+
+// 아래는 홀드아웃(완전히 다른 데이터셋) 검증 과정에서 baseline(Kotlin)에 추가된
+// predicate 체이닝/매핑 보정을 Go 포팅에도 반영한 회귀 테스트다.
+
+func TestPlanKgSearch_DepartmentHeadKeywordMatchesPredicate(t *testing.T) {
+	plan := planKgSearch("경영지원팀 부서장은 누구인가요?")
+	found := false
+	for _, p := range plan.MatchedPredicates {
+		if p == "부서장" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected 부서장 predicate to match, got %v", plan.MatchedPredicates)
+	}
+}
+
+func TestPlanKgSearch_LeadsKeywordAfterDepartmentEntityMapsToDepartmentHead(t *testing.T) {
+	// "~팀을 이끄는 사람"은 프로젝트 리드("이끈다")가 아니라 부서장을 묻는 질문이다 —
+	// 엔티티가 부서 토큰(~팀)이면 leadsProjectKeywords 매칭이 부서장으로 재매핑되어야 한다.
+	plan := planKgSearch("경영지원팀을 이끄는 사람은 누구입니까?")
+	if len(plan.MatchedPredicates) != 1 || plan.MatchedPredicates[0] != "부서장" {
+		t.Fatalf("expected sole matched predicate 부서장 for a department-entity 이끄는 question, got %v", plan.MatchedPredicates)
+	}
+}
+
+func TestPlanKgSearch_LeadsKeywordAfterPersonEntityStaysProjectLead(t *testing.T) {
+	// 엔티티가 부서 토큰이 아니면(사람 이름 등) "이끄는"은 여전히 "이끈다"(프로젝트 리드)다.
+	plan := planKgSearch("조재원이 이끄는 프로젝트는 뭐야?")
+	if len(plan.MatchedPredicates) != 1 || plan.MatchedPredicates[0] != "이끈다" {
+		t.Fatalf("expected sole matched predicate 이끈다 for a non-department 이끄는 question, got %v", plan.MatchedPredicates)
+	}
+}
+
+func TestPlanKgSearch_MultiplePredicateKeywordsMatchInOrderWithoutDuplication(t *testing.T) {
+	// "부서장이 담당하는" 질문은 부서장(1홉)과 담당한다(2홉) 두 predicate가 순서대로
+	// 매칭되어야 체이닝(KgSearch)이 올바른 hop 순서로 동작한다.
+	plan := planKgSearch("클라우드사업부 부서장이 담당하는 고객사는 어디야?")
+	if len(plan.MatchedPredicates) != 2 {
+		t.Fatalf("expected exactly 2 matched predicates for chaining, got %v", plan.MatchedPredicates)
+	}
+	if plan.MatchedPredicates[0] != "부서장" || plan.MatchedPredicates[1] != "담당한다" {
+		t.Fatalf("expected [부서장, 담당한다] in order, got %v", plan.MatchedPredicates)
+	}
+}
