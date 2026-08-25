@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -38,7 +39,13 @@ func main() {
 	port := getenv("SERVER_PORT", "8080")
 	mcpServerURL := getenv("MCP_SERVER_URL", "http://localhost:8081")
 	ollamaBaseURL := getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-	ollamaModel := getenv("OLLAMA_MODEL", "gemma3:1b")
+	ollamaModel := getenv("OLLAMA_MODEL", "gemma4:e2b-it-qat")
+	// Gemma 4 E2B는 reasoning 모델이라 thinking에 토큰을 먼저 소모한다 —
+	// 512로는 thinking만 하다 답변 전에 잘려 1024로 올렸다(실측으로 확인).
+	maxTokens := 1024
+	if v, err := strconv.Atoi(getenv("OLLAMA_MAX_TOKENS", "1024")); err == nil {
+		maxTokens = v
+	}
 
 	ctx := context.Background()
 
@@ -58,7 +65,7 @@ func main() {
 		Model:       ollamaModel,
 		Temperature: 0.0,
 		NumCtx:      4096,
-		MaxTokens:   512,
+		MaxTokens:   maxTokens,
 		Seed:        42,
 	}
 	go chatClient.Warmup(context.Background())
@@ -68,9 +75,13 @@ func main() {
 		ruleRouter.Fallback = &router.SemanticAiRouteFallback{Chat: chatClient, Logger: logger}
 	}
 	profiler := &core.QueryProfiler{Router: ruleRouter}
+	// Gemma 4 E2B 단일 모델 실측(302문항)에서 에스컬레이션 없이 답변 정확도 93.0%를
+	// 냈고, gemma3:1b 세대에서 에스컬레이션으로 보완하던 격차(73.8%)가 모델 자체
+	// 성능으로 해소되어 기본값을 off로 바꿨다. 더 작은 모델로 되돌릴 계획이면
+	// ESCALATION_ENABLED=true로 켜는 것을 권장한다.
 	escalator := &core.ModelEscalator{
-		Enabled:     true,
-		SmallModel:  getenv("ESCALATION_SMALL_MODEL", "gemma3:1b"),
+		Enabled:     getenv("MODEL_ESCALATION_ENABLED", "false") == "true",
+		SmallModel:  getenv("ESCALATION_SMALL_MODEL", "gemma4:e2b-it-qat"),
 		MediumModel: getenv("ESCALATION_MEDIUM_MODEL", "qwen2.5:3b"),
 		LargeModel:  getenv("ESCALATION_LARGE_MODEL", "qwen2.5:7b"),
 	}

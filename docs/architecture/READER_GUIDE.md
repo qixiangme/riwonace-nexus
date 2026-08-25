@@ -74,7 +74,7 @@ AnswerabilityGate ── 근거가 부족한 주장을 차단
 
 ```bash
 docker compose up -d
-docker exec riwonace-ollama ollama pull gemma3:1b
+docker exec riwonace-ollama ollama pull gemma4:e2b-it-qat
 docker exec riwonace-ollama ollama pull nomic-embed-text
 
 # 벡터 데이터 최초 적재(Spring AI mcp-server만 이 경로를 가진다, 최초 1회)
@@ -86,7 +86,7 @@ cd mcp-server-go && DATABASE_URL=postgres://riwonace:riwonace@localhost:5433/riw
   OLLAMA_BASE_URL=http://localhost:11434 SERVER_PORT=8081 go run ./...
 # 다른 터미널
 cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
-  OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma3:1b SERVER_PORT=8080 \
+  OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma4:e2b-it-qat SERVER_PORT=8080 \
   ROUTER_FALLBACK=semantic-ai go run .
 ```
 

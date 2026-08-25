@@ -15,27 +15,38 @@ mcp-server만 Node.js로 교체한 AIR 조합을 비교한다.
 | Spring AI (`mcp-server-spring`, `agent-app-spring`) | Kotlin/Spring Boot 풀스택 | 대용량 데이터·복잡한 트랜잭션에 강한 참조 구현 |
 | AIR (`mcp-server-air`) | agent-app-spring + Node.js MCP 서버 | mcp-server만 교체해도 agent-app이 그대로 동작하는지 |
 
-## 실측 결과 (2026-08-25, 3-way 동일 조건)
+## 실측 결과 (2026-08-26, Gemma 4 E2B 기준 3-way 동일 조건)
 
-`eval/generalization-eval.json`(302문항)과 `eval/resource-check-100.json`
-(100문항 리소스 측정용 서브셋)으로, 동일 모델(`gemma3:1b` + escalation
-`qwen2.5:3b`/`qwen2.5:7b`), 동일 seed(42), `ROUTER_FALLBACK=semantic-ai`
-조건에서 세 구현체를 측정했다.
+지정과제 공지가 권장하는 모델은 **Gemma 4 E2B**(Ollama 태그
+`gemma4:e2b-it-qat`)다. `eval/generalization-eval.json`(302문항)으로,
+동일 모델(`gemma4:e2b-it-qat`, 모델 에스컬레이션 비활성화), 동일 seed(42),
+`ROUTER_FALLBACK=semantic-ai` 조건에서 세 구현체를 측정했다.
 
-### 정확도 (302문항)
+### 정확도 (302문항, Gemma 4 E2B)
 
 | 지표 | Go | Spring AI | AIR |
 |---|---:|---:|---:|
-| 라우팅 정확도 | 98.0% | 99.3% | 99.3% |
-| 답변 정확도 | 73.8% | 73.8% | 73.5% |
-| SQL 답변 정확도 | 55.1% | 55.1% | 55.1% |
-| VECTOR 답변 정확도 | 90.0% | 93.3% | 90.0% |
-| GRAPH 답변 정확도 | 95.6% | 94.7% | 94.7% |
+| 라우팅 정확도 | 100.0% | 100.0% | 100.0% |
+| 답변 정확도 | 93.0% | 93.0% | 92.7% |
+| SQL 답변 정확도 | 91.1% | 91.1% | 90.5% |
+| VECTOR 답변 정확도 | 76.7% | 76.7% | 76.7% |
+| GRAPH 답변 정확도 | 100.0% | 100.0% | 100.0% |
+| 평균 지연 | 11,447ms | 11,443ms | 11,044ms |
 
-세 구현체의 정확도는 동급이다. 오차범위 안의 차이(±1.5%p)만 존재하고,
-SQL 세부 정확도는 세 구현체 모두 정확히 일치한다(55.1%).
+세 구현체는 소수점 단위까지 사실상 동급이다. `gemma3:1b` + 에스컬레이션
+조합(답변 정확도 73.5~73.8%) 대비 Gemma 4 E2B 단일 모델은 **19%p 이상
+개선**됐다 — 특히 SQL 정확도가 55.1%→90.5~91.1%로 크게 뛰었는데, 이는
+이전 실패의 상당수가 라우팅·아키텍처 문제가 아니라 **모델 자체의
+이해력 부족**이었다는 뜻이다. 에스컬레이션(작은 모델→큰 모델 전환)으로
+보완하려던 문제가 적절한 단일 모델로 해소된다.
 
-### 리소스 사용량 (100문항, idle 대비 부하 시 peak RSS)
+Gemma 4 E2B는 reasoning 모델이라 답변 전에 `thinking` 토큰을 먼저
+소비한다. `max-tokens`를 512에서 1024로 올려야 thinking 이후 실제 답변까지
+도달하며(`OLLAMA_MAX_TOKENS` 환경변수로 조정 가능), 이로 인해 평균
+지연이 이전(1.8~5.3초)보다 길어졌다(11초 내외) — 다만 이는 세 구현체
+모두 동일하게 적용되는 조건이라 상대 비교에는 영향이 없다.
+
+### 리소스 사용량 (100문항, idle 대비 부하 시 peak RSS, gemma3:1b 세대 실측)
 
 | 구현체 | agent-app RSS | mcp-server RSS | 합계 |
 |---|---:|---:|---:|
@@ -46,18 +57,22 @@ SQL 세부 정확도는 세 구현체 모두 정확히 일치한다(55.1%).
 Go는 Spring AI 대비 리소스를 **약 11분의 1**로 줄인다. 부하를 걸어도
 (idle → 100문항 처리) 세 구현체 모두 peak RSS가 idle 대비 거의 증가하지
 않는다 — 이 규모(직원 45명 등 Company-X 시드 데이터 수준)에서는 메모리가
-요청량이 아니라 런타임 자체(Go vs JVM vs Node.js)로 결정된다.
+요청량이 아니라 런타임 자체(Go vs JVM vs Node.js)로 결정된다. 이 리소스
+실측은 `gemma3:1b` 기준이며, `gemma4:e2b-it-qat`(모델 자체가 더 큼, 약
+2.3B effective)로 재측정하면 모델 로드 메모리가 늘어날 수 있으나, 세
+구현체 간 상대적 격차(약 11배)는 유지될 것으로 예상한다 — 재측정은
+아직 하지 않았다.
 
 ### latency는 참고치다
 
 이 로컬 macOS + Docker Desktop(CPU 전용 Ollama 추론) 환경에서는 시스템
-부하에 따라 같은 구현체의 latency도 1.8초~5.3초까지 흔들린다. 네이티브
+부하에 따라 같은 구현체의 latency가 크게 흔들릴 수 있다. 네이티브
 Ollama.app과 Docker 컨테이너의 Ollama가 포트를 동시에 점유하거나(IPv4/IPv6
 각각 바인딩), macOS Spotlight 인덱싱이 백그라운드에서 CPU를 잠식하는 경우
-이 변동폭이 특히 커진다. 이 요인들을 제거하면 세 구현체의 latency는
-5,054~5,477ms로 3% 이내에서 수렴한다 — 세 구현체 사이의 latency 차이는
-유의미하지 않다. 이 결론은 로컬 환경 기준이며, 서버급 GPU 추론 인프라에서는
-재검증이 필요하다.
+이 변동폭이 특히 커진다. 이 요인들을 제거한 뒤에도 Gemma 4 E2B의 reasoning
+토큰 소비 때문에 지연 자체는 gemma3:1b보다 늘어나지만, 세 구현체 사이의
+차이는 여전히 유의미하지 않다(11.0~11.4초, 4% 이내). 이 결론은 로컬 환경
+기준이며, 서버급 GPU 추론 인프라에서는 재검증이 필요하다.
 
 ## 기본 구현: Go
 
@@ -82,7 +97,7 @@ cd mcp-server-go && DATABASE_URL=postgres://riwonace:riwonace@localhost:5433/riw
 
 # 별도 터미널
 cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
-  OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma3:1b SERVER_PORT=8080 \
+  OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma4:e2b-it-qat SERVER_PORT=8080 \
   ROUTER_FALLBACK=semantic-ai go run .
 ```
 

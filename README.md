@@ -50,6 +50,12 @@ MCP Server (:8081)
 | `companyx-dataset-v1.0` | 예제 데이터셋 |
 | `eval` | 평가 및 벤치마크 도구 |
 
+지정과제 권장 모델 Gemma 4 E2B(`gemma4:e2b-it-qat`) 기준 302문항 동일 조건
+실측에서 세 구현체 모두 라우팅 100.0%, 답변 정확도 92.7~93.0%로 사실상
+동급이며, 리소스는 Go가 Spring AI 대비 약 11분의 1입니다. 세부 비교는
+[구현체 비교](./docs/architecture/IMPLEMENTATIONS.md), 종합 결과는
+[최종 결과 보고서](./report/FINAL_REPORT.md)를 참고하세요.
+
 ## 빠른 시작
 
 ### 준비 사항
@@ -63,7 +69,7 @@ MCP Server (:8081)
 
 ```bash
 docker compose up -d
-docker exec riwonace-ollama ollama pull gemma3:1b
+docker exec riwonace-ollama ollama pull gemma4:e2b-it-qat
 docker exec riwonace-ollama ollama pull nomic-embed-text
 ```
 
@@ -95,7 +101,7 @@ go run ./...
 cd agent-app-go
 MCP_SERVER_URL=http://localhost:8081 \
 OLLAMA_BASE_URL=http://localhost:11434 \
-OLLAMA_MODEL=gemma3:1b \
+OLLAMA_MODEL=gemma4:e2b-it-qat \
 SERVER_PORT=8080 \
 go run .
 ```
@@ -139,6 +145,7 @@ MCP 서버는 `vector_search`, `run_sql`, `kg_search` 도구와 `db://schema` �
 
 ## 문서
 
+- [최종 결과 보고서](./report/FINAL_REPORT.md)
 - [아키텍처](./ARCHITECTURE.md)
 - [MCP 도구 계약](./docs/architecture/MCP_CONTRACT.md)
 - [구현체 비교](./docs/architecture/IMPLEMENTATIONS.md)

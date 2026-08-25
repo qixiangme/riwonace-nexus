@@ -18,7 +18,7 @@ Spring AI와 동급이며, 리소스 사용량은 11분의 1 수준이다. 실�
 ```bash
 export MCP_SERVER_URL=http://localhost:8081   # mcp-server 또는 mcp-server-go
 export OLLAMA_BASE_URL=http://localhost:11434
-export OLLAMA_MODEL=gemma3:1b
+export OLLAMA_MODEL=gemma4:e2b-it-qat
 export SERVER_PORT=8080
 go run .
 ```
@@ -61,28 +61,24 @@ go test ./...
 
 ## 검증
 
-실제 `mcp-server-go` + Postgres + Ollama(`gemma3:1b`, `qwen2.5:3b`,
-`nomic-embed-text`)에 붙여 SQL/VECTOR/GRAPH 세 라우트 모두 end-to-end로
-수동 검증했다: `/api/tools`, `/api/v2/status`, 그리고 각 라우트별 `/api/chat/v2`
-호출이 정상적인 tool call 순서·컨텍스트 소스·모델 에스컬레이션과 함께 응답함을
-확인했다.
+실제 `mcp-server-go` + Postgres + Ollama(`gemma4:e2b-it-qat`,
+`nomic-embed-text`)에 붙여 302문항(`eval/generalization-eval.json`)을
+end-to-end로 재검증했다: 라우팅 정확도 100.0%, 답변 정확도 93.0%로
+`agent-app-spring`과 소수점까지 동일하다. 세부 수치는
+[IMPLEMENTATIONS.md](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 
 ## 권장 사항
 
-startup(5배)·RSS(13배) 이득은 명확하지만, **아직 baseline(Kotlin/Spring AI)의
-답변 정확도 버그 수정 8건이 이 포팅에 반영되지 않았다.** 다중 인스턴스
-스케일 아웃이나 콜드스타트가 실제 제약이 아니라면 baseline을 기본으로
-유지하는 것을 권장한다. 자세한 실측 비교와 판단 근거는 저장소 루트
+정확도는 Spring AI와 동급이면서 리소스는 약 11분의 1이라 **기본 구현으로
+사용한다.** startup 5배, RSS 13배 이득이 다중 인스턴스 스케일 아웃이나
+콜드스타트가 중요한 환경에서 실질적이다. 대용량 데이터 환경에서의 재검증은
+아직 하지 않았다 — 자세한 판단 근거는 저장소 루트
 [`docs/architecture/IMPLEMENTATIONS.md`](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 
 ## 위험 / 알려진 한계
 
-- **정확도 버그 미반영**: baseline에서 고친 `AnswerabilityGate` 클레임 오판,
-  `DeterministicSqlPlanner` v2 미연결, 라우팅 키워드 누락 등은 이 Go 포팅에
-  아직 반영되지 않았다. baseline과 같은 조건(`gemma3:4b`)에서 재측정하지
-  않았으므로 지금 이 포팅으로 전환하면 baseline에서 이미 해결된 오답 패턴을
-  다시 겪을 수 있다.
 - **표현 다양성 검증 부족**: baseline은 302문항(문체 3~4배 변형) +
-  홀드아웃 298문항(완전히 다른 데이터셋)까지 검증했지만, 이 포팅은 원본
-  오라클 테스트와 수동 end-to-end 검증까지만 거쳤다.
+  홀드아웃 298문항(완전히 다른 데이터셋)까지 검증했지만, 이 포팅은 302문항
+  재검증까지만 거쳤고 홀드아웃 298문항으로는 아직 반복 검증하지 않았다.
+- **대용량 데이터 미검증**: 직원 45명 수준의 소규모 데이터셋 기준 실측이다.
 - **CI 미포함**: 루트 Gradle CI 대상이 아니다. `go test ./...`로만 자체 검증된다.
