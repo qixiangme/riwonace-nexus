@@ -11,7 +11,7 @@ var sqlKeywords = []string{
 	"몇", "개수", "수는", "평균", "합계", "총", "최대", "최소", "가장 비싼", "가장 싼",
 	"가장 많은", "가장 높은", "순위", "상위", "하위", "목록", "리스트", "재고", "급여",
 	"연봉", "매출", "주문", "계약", "티켓", "우선순위", "분기", "금액", "등록된",
-	"직원", "가격", "출시 상태", "부서별", "언제 입사", "입사일",
+	"가격", "출시 상태", "부서별", "언제 입사", "입사일", "모두 알려줘", "이름을 모두",
 	"count", "average", "sum", "max", "min", "how many", "list", "top",
 }
 
@@ -20,7 +20,7 @@ var graphKeywords = []string{
 	"무엇을 개발", "어디서 만들", "개발사", "라이선스", "무슨 사이",
 	"사용 중인", "사용하는", "사용 고객", "이용 고객", "실제 사용", "실제 이용",
 	"이용하는", "사용자 고객",
-	"소속", "담당", "팀장", "이끄", "이슈",
+	"소속", "담당", "팀장", "부서장", "이끄", "이슈",
 	"relation", "related", "depends", "who made", "who developed",
 }
 
@@ -41,6 +41,12 @@ var compositionCues = []string{"함께", "같이", "동시에", "한 번에", "�
 var productNumericCore = regexp.MustCompile(`(?i)\d[\d,]*(?:\.\d+)?(?:원|만원|%|인|개|건|명)?[^.?!]{0,20}(?:제품|product)`)
 
 var lookbehindExcluded = regexp.MustCompile(`(?i)[a-z0-9_-]`)
+
+// departmentLike mirrors DEPARTMENT_LIKE in RuleBasedRouter.kt: department/organization
+// name tokens that can accidentally contain a vectorKeywords substring (e.g. "운영" inside
+// "인프라운영팀"). Route() strips these before re-checking vectorKeywords so that overlap
+// alone doesn't force VECTOR.
+var departmentLike = regexp.MustCompile(`[\x{AC00}-\x{D7A3}a-z0-9]+(?:사업부|부서|팀)`)
 
 // matchesProductNumeric mirrors PRODUCT_NUMERIC.containsMatchIn(q), including the
 // `(?<![a-z0-9_-])` guard before the leading digit.
@@ -83,6 +89,10 @@ func containsAny(q string, keywords []string) bool {
 // Route mirrors fun route(question: String): List<Route>.
 func (r *RuleBasedRouter) Route(question string) []Route {
 	q := strings.ToLower(question)
+	// "인프라운영팀"처럼 부서/조직명 안에 vectorKeywords 단어("운영" 등)가 우연히
+	// 포함된 경우, 그 매칭만으로 VECTOR를 확정하면 안 된다 — 부서명 토큰 자체를
+	// 지우고 나머지 텍스트로만 vectorKeywords를 재검사한다.
+	qWithoutDeptNames := departmentLike.ReplaceAllString(q, " ")
 
 	var routes []Route
 	if containsAny(q, sqlKeywords) || matchesProductNumeric(q) {
@@ -91,7 +101,7 @@ func (r *RuleBasedRouter) Route(question string) []Route {
 	if containsAny(q, graphKeywords) {
 		routes = append(routes, RouteGraph)
 	}
-	if containsAny(q, vectorKeywords) {
+	if containsAny(qWithoutDeptNames, vectorKeywords) {
 		routes = append(routes, RouteVector)
 	}
 

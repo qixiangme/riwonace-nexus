@@ -51,3 +51,37 @@ func TestSchemaPromptFormatter_NonJsonResponseFromOtherMcpImplFallsBackToRaw(t *
 		t.Fatalf("got %q", got)
 	}
 }
+
+// Kotlin's Jackson JsonNode preserves object-key insertion order; verified end-to-end that
+// reordering this section (e.g. alphabetically) changes what SQL gemma3:4b generates for an
+// unrelated question, spuriously adding a status='active' filter. Go's map[string]any has no
+// stable order, so Format must walk the raw JSON token stream instead of unmarshalling into a
+// map, or this ordering guarantee silently regresses.
+func TestSchemaPromptFormatter_PreservesOriginalKeyOrderNotAlphabetical(t *testing.T) {
+	f := &SchemaPromptFormatter{}
+	raw := `{
+		"tables": {"zzz_table": ["id (integer)"], "aaa_table": ["id (integer)"]},
+		"valueHints": {
+			"clients.industry": ["미디어"],
+			"clients.company_size": ["mid"],
+			"contracts.status": ["active"]
+		}
+	}`
+	result := f.Format(raw)
+
+	tableOrder := strings.Index(result, "TABLE zzz_table")
+	otherTableOrder := strings.Index(result, "TABLE aaa_table")
+	if tableOrder == -1 || otherTableOrder == -1 || tableOrder > otherTableOrder {
+		t.Fatalf("expected zzz_table before aaa_table (source order), got %q", result)
+	}
+
+	industryIdx := strings.Index(result, "clients.industry")
+	sizeIdx := strings.Index(result, "clients.company_size")
+	statusIdx := strings.Index(result, "contracts.status")
+	if industryIdx == -1 || sizeIdx == -1 || statusIdx == -1 {
+		t.Fatalf("expected all three valueHints columns present, got %q", result)
+	}
+	if !(industryIdx < sizeIdx && sizeIdx < statusIdx) {
+		t.Fatalf("expected valueHints in source order (industry, company_size, status), got %q", result)
+	}
+}

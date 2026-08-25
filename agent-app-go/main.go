@@ -21,8 +21,8 @@ import (
 	"github.com/riwonace/agent-app-go/internal/llm"
 	agentmcp "github.com/riwonace/agent-app-go/internal/mcp"
 	"github.com/riwonace/agent-app-go/internal/router"
-	agentsql "github.com/riwonace/agent-app-go/internal/sql"
 	"github.com/riwonace/agent-app-go/internal/service"
+	agentsql "github.com/riwonace/agent-app-go/internal/sql"
 )
 
 func getenv(key, fallback string) string {
@@ -63,6 +63,9 @@ func main() {
 	go chatClient.Warmup(context.Background())
 
 	ruleRouter := &router.RuleBasedRouter{}
+	if getenv("ROUTER_FALLBACK", "") == "semantic-ai" {
+		ruleRouter.Fallback = &router.SemanticAiRouteFallback{Chat: chatClient, Logger: logger}
+	}
 	profiler := &core.QueryProfiler{Router: ruleRouter}
 	escalator := &core.ModelEscalator{
 		Enabled:     true,
@@ -76,17 +79,18 @@ func main() {
 	recovery := &core.RecoveryPolicy{}
 
 	agentService := &service.AgentServiceV2{
-		Planner:               planner,
-		Optimizer:             optimizer,
-		Gate:                  gate,
-		Recovery:              recovery,
-		Escalator:             escalator,
-		Gateway:               gateway,
-		LLM:                   chatClient,
-		FewShotSelector:       &agentsql.FewShotSelector{},
-		SchemaLinker:          &agentsql.SchemaLinker{},
-		SchemaPromptFormatter: &agentsql.SchemaPromptFormatter{},
-		Logger:                logger,
+		Planner:                 planner,
+		Optimizer:               optimizer,
+		Gate:                    gate,
+		Recovery:                recovery,
+		Escalator:               escalator,
+		Gateway:                 gateway,
+		LLM:                     chatClient,
+		FewShotSelector:         &agentsql.FewShotSelector{},
+		SchemaLinker:            &agentsql.SchemaLinker{},
+		SchemaPromptFormatter:   &agentsql.SchemaPromptFormatter{},
+		DeterministicSqlPlanner: &agentsql.DeterministicSqlPlanner{},
+		Logger:                  logger,
 	}
 
 	controller := &api.ChatController{AgentServiceV2: agentService, Gateway: gateway}

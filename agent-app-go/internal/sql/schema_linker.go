@@ -1,7 +1,6 @@
 package sql
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -10,11 +9,11 @@ import (
 
 // SchemaHint mirrors data class SchemaHint.
 type SchemaHint struct {
-	Table       string
-	Column      string
+	Table        string
+	Column       string
 	MatchedValue string
-	Suggestion  string
-	Confidence  float64
+	Suggestion   string
+	Confidence   float64
 }
 
 var koreanWordRe = regexp.MustCompile(`[\x{AC00}-\x{D7A3}]{2,}`)
@@ -26,28 +25,22 @@ type SchemaLinker struct{}
 func (l *SchemaLinker) LinkEntities(schemaJSON, question string) []SchemaHint {
 	var hints []SchemaHint
 
-	var schema map[string]any
-	if err := json.Unmarshal([]byte(schemaJSON), &schema); err != nil {
+	schema, err := parseOrderedObject(schemaJSON)
+	if err != nil {
 		return nil
 	}
 
-	valueHintsRaw, ok := schema["valueHints"].(map[string]any)
+	valueHintsRaw, ok := schema.get("valueHints")
+	if !ok {
+		return nil
+	}
+	valueHints, ok := valueHintsRaw.(*orderedObject)
 	if !ok {
 		return nil
 	}
 
-	// Sort keys for deterministic iteration (Go map order is random; Kotlin's
-	// LinkedHashMap preserves JSON property order, which we approximate by sorting --
-	// the final result is re-sorted by confidence anyway, so this only affects
-	// same-confidence tie ordering).
-	keys := make([]string, 0, len(valueHintsRaw))
-	for k := range valueHintsRaw {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, qualifiedColumn := range keys {
-		rawValues, _ := valueHintsRaw[qualifiedColumn].([]any)
+	for _, qualifiedColumn := range valueHints.keys {
+		rawValues, _ := valueHints.values[qualifiedColumn].([]any)
 		sep := strings.Index(qualifiedColumn, ".")
 		if sep <= 0 || sep == len(qualifiedColumn)-1 {
 			continue

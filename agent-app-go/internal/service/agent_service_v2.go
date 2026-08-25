@@ -24,31 +24,32 @@ const maxSQLRetries = 2
 
 // AgentAnswerV2 mirrors data class AgentAnswerV2.
 type AgentAnswerV2 struct {
-	Answer          string
-	Routes          []router.Route
-	ToolCalls       []string
-	ContextSources  []string
-	LatencyMs       int64
-	Trace           *core.ExecutionTrace
-	SelectedModel   string
-	ClaimCoverage   float64
-	WasEscalated    bool
+	Answer         string
+	Routes         []router.Route
+	ToolCalls      []string
+	ContextSources []string
+	LatencyMs      int64
+	Trace          *core.ExecutionTrace
+	SelectedModel  string
+	ClaimCoverage  float64
+	WasEscalated   bool
 }
 
 // AgentServiceV2 ports AgentServiceV2.kt 1:1: profile -> plan (DAG) -> execute ->
 // optimize evidence -> answerability gate -> generate (with model escalation) -> trace.
 type AgentServiceV2 struct {
-	Planner               *core.ExecutionPlanner
-	Optimizer             *core.EvidenceOptimizer
-	Gate                  *core.AnswerabilityGate
-	Recovery              *core.RecoveryPolicy
-	Escalator             *core.ModelEscalator
-	Gateway               *agentmcp.Gateway
-	LLM                   *llm.ChatClient
-	FewShotSelector       *agentsql.FewShotSelector
-	SchemaLinker          *agentsql.SchemaLinker
-	SchemaPromptFormatter *agentsql.SchemaPromptFormatter
-	Logger                *slog.Logger
+	Planner                 *core.ExecutionPlanner
+	Optimizer               *core.EvidenceOptimizer
+	Gate                    *core.AnswerabilityGate
+	Recovery                *core.RecoveryPolicy
+	Escalator               *core.ModelEscalator
+	Gateway                 *agentmcp.Gateway
+	LLM                     *llm.ChatClient
+	FewShotSelector         *agentsql.FewShotSelector
+	SchemaLinker            *agentsql.SchemaLinker
+	SchemaPromptFormatter   *agentsql.SchemaPromptFormatter
+	DeterministicSqlPlanner *agentsql.DeterministicSqlPlanner
+	Logger                  *slog.Logger
 }
 
 func (s *AgentServiceV2) Chat(ctx context.Context, question string) AgentAnswerV2 {
@@ -476,9 +477,18 @@ func resolveTemplate(template string, results map[string]any) string {
 }
 
 func (s *AgentServiceV2) generateSQL(ctx context.Context, question, previousAttempt, errorMsg string) (string, error) {
+	if previousAttempt == "" && s.DeterministicSqlPlanner != nil {
+		if plan := s.DeterministicSqlPlanner.Plan(question); plan != nil {
+			return *plan, nil
+		}
+	}
+
 	rawSchema, err := s.Gateway.Schema(ctx)
 	if err != nil {
 		return "", err
+	}
+	if s.Logger != nil {
+		s.Logger.Info("raw schema debug", "rawSchema", rawSchema)
 	}
 	schema := s.SchemaPromptFormatter.Format(rawSchema)
 	selectedExamples := s.FewShotSelector.SelectExamples(question, 1)
@@ -504,6 +514,10 @@ func (s *AgentServiceV2) generateSQL(ctx context.Context, question, previousAtte
 	}
 
 	user := fmt.Sprintf("스키마:\n%s%s\n\n%s\n\n%s질문: %s\nSQL:", schema, hintBlock, examplesBlock, retryBlock, question)
+
+	if s.Logger != nil {
+		s.Logger.Info("full prompt debug", "system", system, "user", user)
+	}
 
 	raw, err := s.LLM.Complete(ctx, system, user)
 	if err != nil {
@@ -613,6 +627,9 @@ func (s *AgentServiceV2) generateAnswer(ctx context.Context, question string, ev
 	system := "너는 리원에이스의 데이터 플랫폼 AI 비서다. " +
 		"아래 컨텍스트에서 질문과 관련된 정보를 찾아 한국어로 답한다. " +
 		"컨텍스트에 장애 보고서, 기술 문서, 회의록 등이 있으면 핵심 내용(고객사, 제품, 원인, 조치사항 등)을 요약한다. " +
+		"컨텍스트가 여러 출처([출처: sql], [출처: knowledge-graph] 등)로 나뉘어 있으면, " +
+		"질문의 엔티티(고객사/제품/부서/이름 등)와 실제로 일치하는 출처만 사용하고 " +
+		"무관한 출처의 결과는 답변에 섞지 않는다. " +
 		"답변 끝에 출처를 표기한다."
 	user := "컨텍스트:\n" + contextBlock + "\n\n질문: " + question
 
