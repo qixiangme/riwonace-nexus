@@ -206,6 +206,7 @@ CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 벡터 데
 
 | 문서 | 내용 |
 |---|---|
+| [최종 결과 보고서](./report/FINAL_REPORT.md) | 프로젝트 개요, 3-way 구현체 비교, 정확도 개선 이력, SBOM, 알려진 한계를 종합한 최종 보고서 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 전체 구조, 요청 처리 흐름, 주요 설계 결정 |
 | [MCP_CONTRACT.md](./docs/architecture/MCP_CONTRACT.md) | MCP 통신 흐름, 도구별 입출력, 보안 계층 |
 | [IMPLEMENTATIONS.md](./docs/architecture/IMPLEMENTATIONS.md) | Go/Spring AI/AIR 구현체별 배경, 실행 방법, 실측 비교, 선택 기준 |
