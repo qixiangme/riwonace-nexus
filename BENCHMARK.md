@@ -106,11 +106,11 @@ MCP 서버만 교체: Spring AI MCP Server(Kotlin, :8081) ↔ **air 프레임워
 
 `RuleBasedRouter`는 키워드가 하나도 안 걸리면 무조건 VECTOR로 떨어진다. 공식 30문항의
 라우팅 적중률이 100%인 건 구조가 완벽해서가 아니라 질문 표현이 키워드 목록과 우연히
-겹쳐서일 수 있다는 의심을 실측으로 검증했다 ([#1](https://github.com/qixiangme/DB-MCP/issues/1)).
+겹쳐서일 수 있다는 의심을 실측으로 검증했다 ([#1](https://github.com/qixiangme/riwonace-nexus/issues/1)).
 
 **방법**: 공식 30문항을 sqlKeywords/graphKeywords/vectorKeywords에 있는 단어를 하나도
 안 쓰고 같은 사실을 묻도록 다시 쓴 `eval/keyword-gap-eval.json`을 만들고, 키워드
-미매칭 시에만 개입하는 폴백 2종([#2](https://github.com/qixiangme/DB-MCP/pull/2))을
+미매칭 시에만 개입하는 폴백 2종([#2](https://github.com/qixiangme/riwonace-nexus/pull/2))을
 이 데이터셋과 기존 공식 30문항 양쪽에 실측했다.
 
 | 폴백 전략 | MCP 서버 | 라우팅 적중률 | SQL | VECTOR | GRAPH | 답변 정확도 | 평균 지연 |

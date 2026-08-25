@@ -13,8 +13,10 @@
 ## 평가기준 근거
 
 모든 이슈와 PR은 프로젝트 구조 및 코드 완성도, 오픈소스 발전 가능성, 개발 문서 구체성,
-프로젝트 혁신성, 프로젝트 팀워크 중 주 평가항목을 하나 선택합니다. 현재 문제의 증거와
-최소 0.1점 이상 기여할 수 있다는 가설, 예상 상승 폭, 구현 전후 확인 방법을 함께 적습니다.
+프로젝트 혁신성, 프로젝트 팀워크 중 주 평가항목을 하나 선택하고 보조 평가항목을 함께
+지정합니다. 아울러 기준 브랜치, 현재 문제의 증거, 전후 검증 방법, 위험과 되돌리기를
+템플릿의 필수 항목으로 받습니다. 최소 0.1점 이상 기여할 수 있다는 가설, 예상 상승 폭,
+구현 전후 확인 방법을 함께 적습니다.
 예상 점수는 심사 결과를 보장하는 수치가 아니며, 근거가 없거나 중복되는 변경은 올리지 않습니다.
 
 예약된 일일 검토에서도 같은 규칙을 사용합니다. 후보마다 독립 브랜치를 사용하고 자동으로
@@ -23,14 +25,15 @@
 
 ## 1. 이슈 등록
 
-1. [기존 이슈](https://github.com/qixiangme/DB-MCP/issues)를 검색해 중복을 확인합니다.
-2. [새 이슈 만들기](https://github.com/qixiangme/DB-MCP/issues/new/choose)에서 `Feature`,
+1. [기존 이슈](https://github.com/qixiangme/riwonace-nexus/issues)를 검색해 중복을 확인합니다.
+2. [새 이슈 만들기](https://github.com/qixiangme/riwonace-nexus/issues/new/choose)에서 `Feature`,
    `Bug`, `Benchmark`, `Docs`, `Refactor`, `Security` 중 목적에 맞는 양식을 선택합니다.
 3. 문제와 범위, 완료 조건, 안전성 영향, 재현 방법을 작성합니다.
-4. 주 평가항목, 현재 문제의 증거, 예상 상승 폭 가설과 전후 검증 방법을 기록합니다.
+4. 주 평가항목과 보조 평가항목, 기준 브랜치, 현재 문제의 증거, 예상 상승 폭 가설,
+   전후 검증 방법, 위험과 되돌리기를 기록합니다.
 
 악용 가능한 취약점, 개인정보, 토큰, 내부 URL은 공개 이슈에 쓰지 않습니다. 이러한 내용은
-[GitHub Security Advisory](https://github.com/qixiangme/DB-MCP/security/advisories/new)로
+[GitHub Security Advisory](https://github.com/qixiangme/riwonace-nexus/security/advisories/new)로
 비공개 제보해 주세요.
 
 ## 2. 브랜치와 구현

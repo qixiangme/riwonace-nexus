@@ -1,6 +1,8 @@
-# MCP 지능형 데이터 플랫폼
+# Riwonace Nexus
 
-[![CI](https://github.com/qixiangme/DB-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/qixiangme/DB-MCP/actions/workflows/ci.yml)
+> MCP-based on-premise intelligent data search platform
+
+[![CI](https://github.com/qixiangme/riwonace-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/qixiangme/riwonace-nexus/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 사내의 문서, 관계형 테이블, 지식 그래프를 한곳에서 조회하고 일상어 질문에 근거 있는 답을
@@ -191,5 +193,7 @@ CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실
 
 기여를 시작하기 전에 [CONTRIBUTING.md](./CONTRIBUTING.md)를 읽어 주세요. 이슈 등록,
 브랜치 작성, 테스트와 벤치마크, PR 템플릿, Draft·Ready·Close 판정 기준을 한곳에
-정리했습니다. 이 프로젝트에 참여하는 모든 사람은 [행동 강령](./CODE_OF_CONDUCT.md)을
+정리했습니다. 이슈와 PR 템플릿은 기준 브랜치, 현재 문제 증거, 전후 검증 방법,
+위험과 되돌리기, 주·보조 평가항목을 필수로 받습니다 — 사람과 자동화가 같은 근거
+수준으로 작성하도록 [운영 절차](./docs/contributing/WORKFLOW.md)와 같은 계약을 씁니다. 이 프로젝트에 참여하는 모든 사람은 [행동 강령](./CODE_OF_CONDUCT.md)을
 따라야 합니다. 보안 취약점은 [SECURITY.md](./SECURITY.md)의 절차에 따라 제보해 주세요.
