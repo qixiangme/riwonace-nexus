@@ -487,9 +487,6 @@ func (s *AgentServiceV2) generateSQL(ctx context.Context, question, previousAtte
 	if err != nil {
 		return "", err
 	}
-	if s.Logger != nil {
-		s.Logger.Info("raw schema debug", "rawSchema", rawSchema)
-	}
 	schema := s.SchemaPromptFormatter.Format(rawSchema)
 	selectedExamples := s.FewShotSelector.SelectExamples(question, 1)
 	examplesBlock := s.FewShotSelector.FormatExamplesForPrompt(selectedExamples)
@@ -514,10 +511,6 @@ func (s *AgentServiceV2) generateSQL(ctx context.Context, question, previousAtte
 	}
 
 	user := fmt.Sprintf("스키마:\n%s%s\n\n%s\n\n%s질문: %s\nSQL:", schema, hintBlock, examplesBlock, retryBlock, question)
-
-	if s.Logger != nil {
-		s.Logger.Info("full prompt debug", "system", system, "user", user)
-	}
 
 	raw, err := s.LLM.Complete(ctx, system, user)
 	if err != nil {

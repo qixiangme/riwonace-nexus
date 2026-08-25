@@ -7,9 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 )
 
 // ChatClient calls Ollama's /api/chat with a system+user message pair, matching the
@@ -66,11 +64,6 @@ func (c *ChatClient) Complete(ctx context.Context, system, user string) (string,
 	if err != nil {
 		return "", err
 	}
-	if f, ferr := os.OpenFile("/tmp/go-wire-requests.jsonl", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); ferr == nil {
-		f.Write(body)
-		f.WriteString("\n")
-		f.Close()
-	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/api/chat", bytes.NewReader(body))
 	if err != nil {
@@ -91,18 +84,8 @@ func (c *ChatClient) Complete(ctx context.Context, system, user string) (string,
 		return "", fmt.Errorf("ollama chat request failed: status %d", resp.StatusCode)
 	}
 
-	respBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	if f, ferr := os.OpenFile("/tmp/go-wire-responses.jsonl", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644); ferr == nil {
-		f.Write(respBytes)
-		f.WriteString("\n")
-		f.Close()
-	}
-
 	var out ollamaChatResponse
-	if err := json.Unmarshal(respBytes, &out); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return "", err
 	}
 	return out.Message.Content, nil
