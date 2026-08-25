@@ -1,8 +1,10 @@
 # mcp-server-go
 
-`mcp-server`(Kotlin/Spring AI)의 1:1 Go 포팅. 아키텍처·라우팅·SQL 처리·caching 정책을
-임의로 개선하지 않고 동일한 MCP tool contract를 재현한다. 상세 배경은 저장소 루트의
-이슈 [#100](https://github.com/qixiangme/riwonace-nexus/issues/100),
+`mcp-server`의 기본 구현체다. `mcp-server-spring`(Kotlin/Spring AI)과 동일한
+아키텍처·라우팅·SQL 처리·caching 정책, MCP tool contract를 재현한다. 실측
+비교는 [IMPLEMENTATIONS.md](../docs/architecture/IMPLEMENTATIONS.md)를
+참고한다. 상세 배경은 저장소 루트의 이슈
+[#100](https://github.com/qixiangme/riwonace-nexus/issues/100),
 [#101](https://github.com/qixiangme/riwonace-nexus/issues/101)을 참고.
 
 ## 제공 계약
@@ -51,7 +53,7 @@ go test ./...
 startup(5배)·RSS(13배) 이득은 명확하지만, **baseline(Kotlin/Spring AI)의
 `kg_search` predicate 체이닝·PRODUCT/CLIENT 패턴 인식 버그 수정이 이 포팅에
 반영되지 않았다.** 자세한 실측 비교와 판단 근거는 저장소 루트
-[`docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md`](../docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)를 참고한다.
+[`docs/architecture/IMPLEMENTATIONS.md`](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 
 ## 위험 / 알려진 한계
 

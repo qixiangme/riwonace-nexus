@@ -29,11 +29,11 @@
 사용자 / React 웹 클라이언트
               │ HTTP :8080
               ▼
-       agent-app (Spring AI)
-       프로파일링 · 실행계획 · 라우팅 · NL2SQL · 답변 생성
+        agent-app (Go)
+        프로파일링 · 실행계획 · 라우팅 · NL2SQL · 답변 생성
               │ MCP/SSE
               ▼
-        mcp-server :8081 (Spring AI)
+        mcp-server :8081 (Go)
         검색·SQL·그래프·스키마 도구, 데이터 적재
               │
               ▼
@@ -41,23 +41,20 @@
  관계형·벡터·그래프 저장       로컬 추론·임베딩
 ```
 
-기본 실행 경로는 `agent-app`(폴더: `agent-app-spring`) → `mcp-server`(폴더:
-`mcp-server-spring`)입니다. 이 둘이 이 프로젝트의 표준 구현입니다.
+기본 실행 경로는 `agent-app`(폴더: `agent-app-go`) → `mcp-server`(폴더:
+`mcp-server-go`)입니다. 이 둘이 이 프로젝트의 표준 구현입니다. 302문항
+동일 조건 실측 기준 답변 정확도 73.8%로 Kotlin/Spring AI 구현과 동급이면서,
+자원 사용량(idle 대비 부하 시 peak RSS)은 43MB로 Spring AI(487MB)의
+11분의 1입니다. 벡터 데이터 최초 적재와 대용량 데이터 처리에는
+Kotlin/Spring AI 구현(`agent-app-spring`, `mcp-server-spring`)을 사용합니다.
 
-같은 MCP 도구 계약을 다른 프레임워크·언어로 재현한 선택형 구현체도 있습니다.
+같은 MCP 도구 계약을 Node.js(AIR 프레임워크)로 재현한 `mcp-server-air`도
+있습니다 — agent-app은 Spring AI를 그대로 쓰고 mcp-server만 교체하는
+중간 성능대의 구성입니다.
 
-- `mcp-server-air` — 같은 도구 계약을 Node.js(AIR 프레임워크)로 재구현해 서버를
-  교체할 수 있음을 검증하는 구현체
-- `mcp-server-go` / `agent-app-go` — 전체 스택을 Go + 공식 MCP SDK로 1:1 포팅해
-  언어·런타임 차이에 따른 성능·자원 사용량을 비교하는 구현체
-
-이 구현체들은 기본 실행 경로가 아니며, 배경과 실측 비교는
-[ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)에
-정리했습니다. 302문항 동일 조건 실측 기준 세 구현체의 답변 정확도는
-73.5~73.8%로 사실상 동급이며, 리소스(idle 대비 부하 시 peak RSS)는
-Spring AI 487MB, AIR 294MB, Go 43MB로 Go가 약 11배 가볍습니다 — 이는
-이 프로젝트의 소규모 데이터셋(직원 45명 수준) 기준이며, 대용량 데이터
-환경에서의 재검증은 아직 하지 않았습니다.
+세 구현체의 배경과 실측 비교는
+[IMPLEMENTATIONS.md](./docs/architecture/IMPLEMENTATIONS.md)에
+정리했습니다.
 
 현재 에이전트의 핵심 흐름은 `QueryProfiler → ExecutionPlanner → MCP Gateway →
 EvidenceOptimizer / ContextCurator → AnswerabilityGate → Ollama`입니다. 단순 질문은
@@ -67,14 +64,14 @@ EvidenceOptimizer / ContextCurator → AnswerabilityGate → Ollama`입니다. �
 
 | 영역 | 기술 | 사용 목적 |
 |---|---|---|
-| 언어·런타임 | Kotlin 2.1, Java 17+ | 에이전트와 기본 MCP 서버 |
-| 애플리케이션 | Spring Boot 3.5, Spring AI 1.0 | Ollama, MCP 서버·클라이언트, pgvector 연동 |
+| 언어·런타임 | Go 1.21+, 공식 MCP SDK | 에이전트와 기본 MCP 서버 |
 | 표준 프로토콜 | MCP, SSE | 에이전트와 데이터 도구의 구현 분리 |
 | 데이터베이스 | PostgreSQL 16, pgvector | 관계형 데이터, 문서 벡터, 지식 그래프 통합 저장 |
 | 로컬 AI | Ollama, `gemma3:1b`, `nomic-embed-text` | 답변·NL2SQL 생성과 문서 임베딩 |
-| 대체 구현체 | Node.js(`@airmcp-dev/core`), Go(공식 MCP SDK) | 서버 교체 가능성 및 언어·런타임 비교 검증 |
+| 대용량 처리용 구현체 | Kotlin 2.1, Java 17+, Spring Boot 3.5, Spring AI 1.0 | 벡터 데이터 최초 적재, 대용량 데이터·복잡한 트랜잭션 |
+| 중간 성능 구현체 | Node.js(`@airmcp-dev/core`) | agent-app은 Spring AI 유지, mcp-server만 경량화 |
 | 웹 클라이언트 | React 19, TypeScript 5.7, Vite 6 | 선택형 대화 UI |
-| 빌드·검증 | Gradle Kotlin DSL, npm, JUnit 5, Docker Compose | 빌드, 테스트, 로컬 인프라 실행 |
+| 빌드·검증 | Gradle Kotlin DSL, Go, npm, JUnit 5, Docker Compose | 빌드, 테스트, 로컬 인프라 실행 |
 
 저사양 PC의 기본 모델 용량은 약 1.1GB입니다. 환경에 따라
 `OLLAMA_MODEL=qwen2.5:3b`처럼 모델만 교체할 수 있습니다. 설계 원칙은
@@ -86,17 +83,17 @@ EvidenceOptimizer / ContextCurator → AnswerabilityGate → Ollama`입니다. �
 
 | 모듈 | 폴더 | 포트 | 역할 |
 |---|---|---:|---|
-| `agent-app` | `agent-app-spring` | 8080 | 질문 프로파일링·실행계획, 라우팅, NL2SQL, 근거 검증, 답변 생성, HTTP API |
-| `mcp-server` | `mcp-server-spring` | 8081 | 검색·SQL·그래프·스키마 도구와 데이터 적재 제공 |
+| `agent-app` | `agent-app-go` | 8080 | 질문 프로파일링·실행계획, 라우팅, NL2SQL, 근거 검증, 답변 생성, HTTP API |
+| `mcp-server` | `mcp-server-go` | 8081 | 검색·SQL·그래프·스키마 도구와 데이터 적재 제공 |
 
-같은 MCP 도구 계약을 다른 프레임워크·언어로 재현한 선택형 구현체입니다(각 구현체 상세는
-[ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md) 참고).
+같은 MCP 도구 계약을 재현한 다른 구현체입니다(각 구현체 상세는
+[IMPLEMENTATIONS.md](./docs/architecture/IMPLEMENTATIONS.md) 참고).
 
 | 폴더 | 포트 | 설명 |
 |---|---:|---|
-| `mcp-server-air` | 8082 | `mcp-server`의 Node.js(AIR 프레임워크) 구현체 |
-| `mcp-server-go` | 8081 | `mcp-server`의 Go 구현체(동시 실행 시 포트 변경 필요) |
-| `agent-app-go` | 8080 | `agent-app`의 Go 구현체(동시 실행 시 포트 변경 필요) |
+| `agent-app-spring` | 8080 | 대용량 데이터·복잡한 트랜잭션용 Kotlin/Spring AI 구현체, 벡터 데이터 최초 적재 담당 |
+| `mcp-server-spring` | 8081 | 위와 동일한 목적의 Kotlin/Spring AI MCP 서버(동시 실행 시 포트 변경 필요) |
+| `mcp-server-air` | 8082 | agent-app-spring과 짝을 이루는 Node.js(AIR 프레임워크) MCP 서버, 중간 성능대 |
 
 그 외 모듈입니다.
 
@@ -115,21 +112,22 @@ MCP 서버가 제공하는 도구는 다음과 같습니다.
 | `run_sql` | 검증을 통과한 읽기 전용 SELECT/WITH 실행 |
 | `kg_search` | 주어–관계–목적어 형태의 지식 그래프 탐색 |
 
-## MCP 아키텍처와 대체 구현
+## MCP 아키텍처와 구현체
 
 에이전트와 데이터 도구 서버는 [Model Context Protocol](https://modelcontextprotocol.io/)로
 통신한다. 통신 흐름·도구별 입출력·보안 계층 같은 상세 계약은
 [MCP_CONTRACT.md](./docs/architecture/MCP_CONTRACT.md)에 정리했다.
 
-기본 구현(Spring AI, `mcp-server`/`agent-app`) 외에 같은 계약을 다른 프레임워크
-(Node.js AIR, `mcp-server-air`)와 다른 언어(Go, `mcp-server-go`/`agent-app-go`)로
-재현한 선택형 구현체가 있다. 왜 두 실험을 만들었는지, 실측 비교 결과와 권장 사항은
-[ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)에
+기본 구현(Go, `mcp-server-go`/`agent-app-go`) 외에 같은 계약을 대용량 데이터용
+언어(Kotlin/Spring AI, `mcp-server-spring`/`agent-app-spring`)와 중간 성능대
+프레임워크(Node.js AIR, `mcp-server-air`)로 재현한 구현체가 있다. 각 구현체를
+선택하는 기준과 실측 비교는
+[IMPLEMENTATIONS.md](./docs/architecture/IMPLEMENTATIONS.md)에
 정리했다.
 
 ## 빠른 시작
 
-필수 조건은 Docker 엔진과 Java 17+입니다.
+필수 조건은 Docker 엔진, Go 1.21+, Java 17+(최초 적재용)입니다.
 
 ```bash
 # 1. PostgreSQL과 Ollama 실행
@@ -139,11 +137,18 @@ docker compose up -d
 docker exec riwonace-ollama ollama pull gemma3:1b
 docker exec riwonace-ollama ollama pull nomic-embed-text
 
-# 3. 기본 Spring AI MCP 서버 실행
+# 3. 벡터 데이터 최초 적재(Spring AI mcp-server만 이 적재 경로를 가진다, 최초 1회)
 ./gradlew :mcp-server-spring:bootRun
+# 적재 완료 후 Ctrl+C로 종료
 
-# 4. 별도 터미널에서 에이전트 실행
-./gradlew :agent-app-spring:bootRun
+# 4. 기본 Go MCP 서버 실행
+cd mcp-server-go && DATABASE_URL=postgres://riwonace:riwonace@localhost:5433/riwonace \
+  OLLAMA_BASE_URL=http://localhost:11434 SERVER_PORT=8081 go run ./...
+
+# 5. 별도 터미널에서 Go 에이전트 실행
+cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
+  OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma3:1b SERVER_PORT=8080 \
+  ROUTER_FALLBACK=semantic-ai go run .
 ```
 
 웹 UI를 사용하려면 별도 터미널에서 다음 명령을 실행합니다.
@@ -172,15 +177,16 @@ curl -s -X POST http://localhost:8080/api/chat -H "Content-Type: application/jso
 # MCP 연결 상태와 노출 도구 확인
 curl -s http://localhost:8080/api/tools
 
-# Ollama를 나중에 실행한 경우 시드 문서 재적재
+# 시드 문서 재적재(Spring AI mcp-server에만 있는 경로)
 curl -s -X POST http://localhost:8081/admin/ingest
 ```
 
 ## 테스트
 
 ```bash
-# Kotlin 전체 테스트
-./gradlew test
+# Go 전체 테스트
+cd agent-app-go && go test ./...
+cd mcp-server-go && go test ./...
 
 # 웹 클라이언트 빌드
 cd client
@@ -191,10 +197,10 @@ npm run build
 벤치마크를 변경했다면 같은 데이터셋·모델·설정·반복 횟수로 기준선과 후보를 모두 측정하고,
 문항별 원시 JSON 결과를 보존해야 합니다.
 
-CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실행 경로인
-`agent-app-spring`/`mcp-server-spring`/`client`/`eval`만 검증합니다. `mcp-server-air`,
-`agent-app-go`/`mcp-server-go`는 선택형 구현체라 CI 대상이 아니며, 각자의 오라클
-테스트(`agent-app-go test`, `mcp-server-air`의 `npm test`)로 별도 검증합니다.
+CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 벡터 데이터 적재 경로인
+`agent-app-spring`/`mcp-server-spring`/`client`/`eval`을 검증합니다. 기본 구현인
+`agent-app-go`/`mcp-server-go`는 각자의 `go test ./...`로, `mcp-server-air`는
+자체 `npm test`로 별도 검증합니다.
 
 ## 문서 안내
 
@@ -202,7 +208,7 @@ CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실
 |---|---|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | 전체 구조, 요청 처리 흐름, 주요 설계 결정 |
 | [MCP_CONTRACT.md](./docs/architecture/MCP_CONTRACT.md) | MCP 통신 흐름, 도구별 입출력, 보안 계층 |
-| [ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md) | AIR/Go 대체 구현의 배경, 실행 방법, 실측 비교, 권장 사항·위험 |
+| [IMPLEMENTATIONS.md](./docs/architecture/IMPLEMENTATIONS.md) | Go/Spring AI/AIR 구현체별 배경, 실행 방법, 실측 비교, 선택 기준 |
 | [BENCHMARK.md](./BENCHMARK.md) | 벤치마크 결과 및 재현 방법 |
 | [최종 재현 벤치마크](./docs/research/CONTEST_FINAL_BENCHMARK.md) | 복합 질문·TACC·AIR/Spring AI·장애 주입 판정 |
 | [실험 원시 결과 아카이브 안내](./eval/results/README.md) | 개별 실험 원시 JSON과 관련 연구 문서 매핑 |

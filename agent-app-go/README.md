@@ -1,8 +1,11 @@
 # agent-app-go
 
-`agent-app`(Kotlin/Spring AI, Architecture v2 경로)의 1:1 Go 포팅. 라우팅·NL2SQL·
-answerability gate·evidence 최적화·recovery policy 로직을 임의로 개선하지 않고
-재현한다. 상세 배경은 저장소 루트 이슈 [#100](https://github.com/qixiangme/riwonace-nexus/issues/100),
+`agent-app`의 기본 구현체다. `agent-app-spring`(Kotlin/Spring AI, Architecture
+v2 경로)과 동일한 라우팅·NL2SQL·answerability gate·evidence 최적화·recovery
+policy 로직을 재현한다. 302문항 동일 조건 실측에서 답변 정확도 73.8%로
+Spring AI와 동급이며, 리소스 사용량은 11분의 1 수준이다. 실측 비교는
+[IMPLEMENTATIONS.md](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
+상세 배경은 저장소 루트 이슈 [#100](https://github.com/qixiangme/riwonace-nexus/issues/100),
 [#101](https://github.com/qixiangme/riwonace-nexus/issues/101)을 참고.
 
 ## 스코프
@@ -70,7 +73,7 @@ startup(5배)·RSS(13배) 이득은 명확하지만, **아직 baseline(Kotlin/Sp
 답변 정확도 버그 수정 8건이 이 포팅에 반영되지 않았다.** 다중 인스턴스
 스케일 아웃이나 콜드스타트가 실제 제약이 아니라면 baseline을 기본으로
 유지하는 것을 권장한다. 자세한 실측 비교와 판단 근거는 저장소 루트
-[`docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md`](../docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)를 참고한다.
+[`docs/architecture/IMPLEMENTATIONS.md`](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 
 ## 위험 / 알려진 한계
 
