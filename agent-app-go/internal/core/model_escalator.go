@@ -85,6 +85,10 @@ func (e *ModelEscalator) SelectModel(profile QueryProfile) ModelSelection {
 
 // ShouldReescalate mirrors shouldReescalate: returns nil when no reescalation is needed.
 func (e *ModelEscalator) ShouldReescalate(current ModelSelection, answerQuality, claimCoverage float64) *ModelSelection {
+	if !e.Enabled {
+		return nil
+	}
+
 	if current.Tier == TierLarge {
 		return nil
 	}

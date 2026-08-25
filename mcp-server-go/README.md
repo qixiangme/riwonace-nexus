@@ -50,16 +50,15 @@ go test ./...
 
 ## 권장 사항
 
-startup(5배)·RSS(13배) 이득은 명확하지만, **baseline(Kotlin/Spring AI)의
-`kg_search` predicate 체이닝·PRODUCT/CLIENT 패턴 인식 버그 수정이 이 포팅에
-반영되지 않았다.** 자세한 실측 비교와 판단 근거는 저장소 루트
+`kg_search` predicate 체이닝, `Product-`/`Client-` 패턴 인식 등 baseline의
+버그 수정을 모두 반영했다. Gemma 4 E2B 302문항 재검증에서 라우팅 100.0%,
+답변 정확도 93.0%로 `mcp-server-spring`과 동급이면서 리소스는 약 11분의
+1이라 **기본 구현으로 사용한다.** 자세한 실측 비교는 저장소 루트
 [`docs/architecture/IMPLEMENTATIONS.md`](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 
 ## 위험 / 알려진 한계
 
-- **`kg_search` 로직 버그 미반영**: baseline의 `mcp-server`는 홀드아웃 검증
-  과정에서 predicate 체이닝 부재("부서장이 담당하는 고객사" 같은 중간 엔티티가
-  필요한 질문에서 부정확한 결과)와 `Product-`/`Client-` 리터럴 접두사에 고정된
-  엔티티 인식 패턴을 고쳤다. 이 Go 포팅은 아직 원래 버전의 로직을 그대로
-  재현하고 있어 같은 문제를 그대로 가지고 있을 가능성이 높다.
+- **표현 다양성 검증 부족**: baseline은 302문항 + 홀드아웃 298문항(완전히
+  다른 데이터셋)까지 검증했지만, 이 포팅은 302문항 재검증까지만 거쳤다.
+- **대용량 데이터 미검증**: 직원 45명 수준의 소규모 데이터셋 기준 실측이다.
 - **CI 미포함**: 루트 Gradle CI 대상이 아니다. `go test ./...`로만 자체 검증된다.

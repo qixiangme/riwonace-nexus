@@ -115,6 +115,11 @@ class ModelEscalator(
         answerQuality: Double,
         claimCoverage: Double,
     ): ModelSelection? {
+        // 에스컬레이션 자체가 비활성화면 재에스컬레이션도 하지 않는다
+        if (!enabled) {
+            return null
+        }
+
         // 이미 최대 모델이면 재에스컬레이션 불가
         if (currentSelection.tier == ModelTier.LARGE) {
             return null

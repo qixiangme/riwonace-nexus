@@ -9,9 +9,9 @@ spring:
       base-url: http://localhost:11434
       chat:
         options:
-          # 초저사양 기본값 1B(~815MB). 사양별 교체는 환경변수 하나로:
-          # OLLAMA_MODEL=gemma3:1b | qwen2.5:1.5b | qwen2.5:3b | qwen2.5:7b
-          model: ${OLLAMA_MODEL:gemma3:1b}
+          # 지정과제 권장 모델 Gemma 4 E2B(~2.3B effective). 사양별 교체는 환경변수 하나로:
+          # OLLAMA_MODEL=gemma4:e2b-it-qat | gemma3:1b | qwen2.5:3b | qwen2.5:7b
+          model: ${OLLAMA_MODEL:gemma4:e2b-it-qat}
           # 사실 질의 시스템에는 결정적 생성이 유리 — 같은 질문에 같은 답 (재현성)
           temperature: 0.0
           # temperature=0이어도 seed 없이는 Ollama가 매 요청 다른 난수 상태로 샘플링해
@@ -19,8 +19,9 @@ spring:
           seed: 42
           # KV 캐시 메모리 절감 — TACC 예산(2,400자)이 이 안에 들어오도록 설계됨
           num-ctx: 4096
-          # CPU 추론에서 생성 토큰 수 = 지연시간. 답변 폭주 방지 겸 지연 안정화
-          max-tokens: 512
+          # Gemma 4 E2B는 reasoning 모델이라 thinking에 토큰을 먼저 소모한다 —
+          # 512로는 thinking만 하다 답변 전에 잘려 1024로 올렸다(실측으로 확인).
+          max-tokens: ${OLLAMA_MAX_TOKENS:1024}
       embedding:
         options:
           # EmbeddingRouteFallback이 라우팅용으로만 사용 — mcp-server의 문서 임베딩과는 별개 호출
@@ -58,11 +59,14 @@ agent:
     # embedding=코사인, ai=기존 3-shot 분류,
     # semantic-ai=데이터 형태·연산 경계를 명시한 의미 분류
     fallback: ${ROUTER_FALLBACK:}
-  # Adaptive Model Escalation 설정
+  # Adaptive Model Escalation 설정. Gemma 4 E2B 단일 모델 실측(302문항)에서
+  # 에스컬레이션 없이 답변 정확도 93.0%를 냈고, gemma3:1b 세대에서 에스컬레이션으로
+  # 보완하던 격차(73.8%)가 모델 자체 성능으로 해소되어 기본값을 off로 바꿨다.
+  # 더 작은 모델(gemma3:1b 등)로 되돌릴 계획이면 true로 켜는 것을 권장한다.
   escalation:
-    enabled: ${MODEL_ESCALATION_ENABLED:true}
+    enabled: ${MODEL_ESCALATION_ENABLED:false}
     models:
-      small: ${MODEL_SMALL:gemma3:1b}
+      small: ${MODEL_SMALL:gemma4:e2b-it-qat}
       medium: ${MODEL_MEDIUM:qwen2.5:3b}
       large: ${MODEL_LARGE:qwen2.5:7b}
   # Answerability Gate 설정
