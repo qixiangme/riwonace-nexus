@@ -1,3 +1,8 @@
+# agent-app/mcp-server를 이후 컨테이너화할 때 리소스 limit을 정하려면
+# docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md의 실측 peak RSS를 기준으로
+# 삼는다: Spring AI 스택 487MB, AIR 스택 294MB, Go 스택 43MB (100문항, 소규모
+# Company-X 시드 데이터 기준). 대용량 데이터 환경에서는 이 수치가 달라질 수
+# 있으니 그때는 재측정 후 갱신한다.
 services:
   postgres:
     image: pgvector/pgvector:pg16

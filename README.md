@@ -53,7 +53,11 @@
 
 이 구현체들은 기본 실행 경로가 아니며, 배경과 실측 비교는
 [ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)에
-정리했습니다.
+정리했습니다. 302문항 동일 조건 실측 기준 세 구현체의 답변 정확도는
+73.5~73.8%로 사실상 동급이며, 리소스(idle 대비 부하 시 peak RSS)는
+Spring AI 487MB, AIR 294MB, Go 43MB로 Go가 약 11배 가볍습니다 — 이는
+이 프로젝트의 소규모 데이터셋(직원 45명 수준) 기준이며, 대용량 데이터
+환경에서의 재검증은 아직 하지 않았습니다.
 
 현재 에이전트의 핵심 흐름은 `QueryProfiler → ExecutionPlanner → MCP Gateway →
 EvidenceOptimizer / ContextCurator → AnswerabilityGate → Ollama`입니다. 단순 질문은
