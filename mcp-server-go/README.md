@@ -2,8 +2,8 @@
 
 `mcp-server`(Kotlin/Spring AI)의 1:1 Go 포팅. 아키텍처·라우팅·SQL 처리·caching 정책을
 임의로 개선하지 않고 동일한 MCP tool contract를 재현한다. 상세 배경은 저장소 루트의
-이슈 [#100](https://github.com/qixiangme/DB-MCP/issues/100),
-[#101](https://github.com/qixiangme/DB-MCP/issues/101)을 참고.
+이슈 [#100](https://github.com/qixiangme/riwonace-nexus/issues/100),
+[#101](https://github.com/qixiangme/riwonace-nexus/issues/101)을 참고.
 
 ## 제공 계약
 

@@ -52,4 +52,4 @@ npm run smoke  # contract-smoke.mjs — 실행 중인 서버에 대한 계약 �
   `npm test`/`npm run smoke`로만 검증되므로, Spring AI 쪽에서 회귀가 생겨도
   AIR 쪽에 자동으로 반영되지 않는다.
 
-상세 배경은 GitHub 이슈 [#49](https://github.com/qixiangme/DB-MCP/issues/49)를 참고한다.
+상세 배경은 GitHub 이슈 [#49](https://github.com/qixiangme/riwonace-nexus/issues/49)를 참고한다.

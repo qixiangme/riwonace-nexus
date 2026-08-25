@@ -2,8 +2,8 @@
 
 `agent-app`(Kotlin/Spring AI, Architecture v2 경로)의 1:1 Go 포팅. 라우팅·NL2SQL·
 answerability gate·evidence 최적화·recovery policy 로직을 임의로 개선하지 않고
-재현한다. 상세 배경은 저장소 루트 이슈 [#100](https://github.com/qixiangme/DB-MCP/issues/100),
-[#101](https://github.com/qixiangme/DB-MCP/issues/101)을 참고.
+재현한다. 상세 배경은 저장소 루트 이슈 [#100](https://github.com/qixiangme/riwonace-nexus/issues/100),
+[#101](https://github.com/qixiangme/riwonace-nexus/issues/101)을 참고.
 
 ## 스코프
 

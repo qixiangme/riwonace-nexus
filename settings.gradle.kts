@@ -1,3 +1,3 @@
-rootProject.name = "riwonace-mcp-platform"
+rootProject.name = "riwonace-nexus"
 
 include("mcp-server", "agent-app")
