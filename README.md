@@ -32,21 +32,28 @@
        agent-app (Spring AI)
        프로파일링 · 실행계획 · 라우팅 · NL2SQL · 답변 생성
               │ MCP/SSE
-       ┌──────┴────────────────────┐
-       ▼                           ▼
-mcp-server :8081             air-server :8082
-기본 Spring AI 구현           선택형 AIR 구현
-       └──────┬────────────────────┘
+              ▼
+        mcp-server :8081 (Spring AI)
+        검색·SQL·그래프·스키마 도구, 데이터 적재
+              │
               ▼
  PostgreSQL 16 + pgvector ── Ollama
  관계형·벡터·그래프 저장       로컬 추론·임베딩
 ```
 
-기본 실행 경로는 `agent-app` → `mcp-server`입니다. `air-server`는 기본 서버를 동시에
-실행하기 위한 모듈이 아니라, 같은 MCP 도구 계약을 다른 프레임워크로 구현해 서버를
-교체할 수 있음을 검증하기 위한 선택형 구현입니다. `mcp-server-go`/`agent-app-go`도
-같은 방식의 선택형 구현으로, 전체 스택을 Go + 공식 MCP SDK로 1:1 포팅해 언어·런타임
-차이에 따른 성능·자원 사용량을 비교합니다.
+기본 실행 경로는 `agent-app`(폴더: `agent-app-spring`) → `mcp-server`(폴더:
+`mcp-server-spring`)입니다. 이 둘이 이 프로젝트의 표준 구현입니다.
+
+같은 MCP 도구 계약을 다른 프레임워크·언어로 재현한 선택형 구현체도 있습니다.
+
+- `mcp-server-air` — 같은 도구 계약을 Node.js(AIR 프레임워크)로 재구현해 서버를
+  교체할 수 있음을 검증하는 구현체
+- `mcp-server-go` / `agent-app-go` — 전체 스택을 Go + 공식 MCP SDK로 1:1 포팅해
+  언어·런타임 차이에 따른 성능·자원 사용량을 비교하는 구현체
+
+이 구현체들은 기본 실행 경로가 아니며, 배경과 실측 비교는
+[ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)에
+정리했습니다.
 
 현재 에이전트의 핵심 흐름은 `QueryProfiler → ExecutionPlanner → MCP Gateway →
 EvidenceOptimizer / ContextCurator → AnswerabilityGate → Ollama`입니다. 단순 질문은
@@ -61,7 +68,7 @@ EvidenceOptimizer / ContextCurator → AnswerabilityGate → Ollama`입니다. �
 | 표준 프로토콜 | MCP, SSE | 에이전트와 데이터 도구의 구현 분리 |
 | 데이터베이스 | PostgreSQL 16, pgvector | 관계형 데이터, 문서 벡터, 지식 그래프 통합 저장 |
 | 로컬 AI | Ollama, `gemma3:1b`, `nomic-embed-text` | 답변·NL2SQL 생성과 문서 임베딩 |
-| 대체 MCP 구현 | Node.js, `@airmcp-dev/core`, `pg` | AIR 호환성 및 서버 교체 가능성 검증 |
+| 대체 구현체 | Node.js(`@airmcp-dev/core`), Go(공식 MCP SDK) | 서버 교체 가능성 및 언어·런타임 비교 검증 |
 | 웹 클라이언트 | React 19, TypeScript 5.7, Vite 6 | 선택형 대화 UI |
 | 빌드·검증 | Gradle Kotlin DSL, npm, JUnit 5, Docker Compose | 빌드, 테스트, 로컬 인프라 실행 |
 
@@ -71,13 +78,26 @@ EvidenceOptimizer / ContextCurator → AnswerabilityGate → Ollama`입니다. �
 
 ## 모듈
 
+기본 구현(표준 실행 경로)은 다음 두 모듈입니다.
+
+| 모듈 | 폴더 | 포트 | 역할 |
+|---|---|---:|---|
+| `agent-app` | `agent-app-spring` | 8080 | 질문 프로파일링·실행계획, 라우팅, NL2SQL, 근거 검증, 답변 생성, HTTP API |
+| `mcp-server` | `mcp-server-spring` | 8081 | 검색·SQL·그래프·스키마 도구와 데이터 적재 제공 |
+
+같은 MCP 도구 계약을 다른 프레임워크·언어로 재현한 선택형 구현체입니다(각 구현체 상세는
+[ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md) 참고).
+
+| 폴더 | 포트 | 설명 |
+|---|---:|---|
+| `mcp-server-air` | 8082 | `mcp-server`의 Node.js(AIR 프레임워크) 구현체 |
+| `mcp-server-go` | 8081 | `mcp-server`의 Go 구현체(동시 실행 시 포트 변경 필요) |
+| `agent-app-go` | 8080 | `agent-app`의 Go 구현체(동시 실행 시 포트 변경 필요) |
+
+그 외 모듈입니다.
+
 | 모듈 | 포트 | 역할 |
 |---|---:|---|
-| `agent-app` | 8080 | 질문 프로파일링·실행계획, 라우팅, NL2SQL, 근거 검증, 답변 생성, HTTP API |
-| `mcp-server` | 8081 | 기본 MCP 서버. 검색·SQL·그래프·스키마 도구와 데이터 적재 제공 |
-| `air-server` | 8082 | 동일한 도구 이름과 안전 정책을 제공하는 선택형 Node.js MCP 서버 |
-| `agent-app-go` | 8080 | `agent-app`의 선택형 Go 포팅 (동시 실행 시 포트 변경 필요) |
-| `mcp-server-go` | 8081 | `mcp-server`의 선택형 Go 포팅 (동시 실행 시 포트 변경 필요) |
 | `client` | 5173 | 선택형 React 웹 클라이언트 |
 | PostgreSQL + pgvector | 5433 | 문서 벡터, 관계형 데이터, 지식 그래프 저장 |
 | Ollama | 11434 | 로컬 대화 모델과 임베딩 모델 실행 |
@@ -97,9 +117,9 @@ MCP 서버가 제공하는 도구는 다음과 같습니다.
 통신한다. 통신 흐름·도구별 입출력·보안 계층 같은 상세 계약은
 [MCP_CONTRACT.md](./docs/architecture/MCP_CONTRACT.md)에 정리했다.
 
-기본 구현(Spring AI) 외에 같은 계약을 다른 프레임워크(Node.js AIR, `air-server`)와
-다른 언어(Go, `mcp-server-go`/`agent-app-go`)로 재현한 선택형 비교 구현이 있다.
-왜 두 실험을 만들었는지, 실측 비교 결과와 권장 사항은
+기본 구현(Spring AI, `mcp-server`/`agent-app`) 외에 같은 계약을 다른 프레임워크
+(Node.js AIR, `mcp-server-air`)와 다른 언어(Go, `mcp-server-go`/`agent-app-go`)로
+재현한 선택형 구현체가 있다. 왜 두 실험을 만들었는지, 실측 비교 결과와 권장 사항은
 [ALTERNATIVE_IMPLEMENTATIONS.md](./docs/architecture/ALTERNATIVE_IMPLEMENTATIONS.md)에
 정리했다.
 
@@ -116,10 +136,10 @@ docker exec riwonace-ollama ollama pull gemma3:1b
 docker exec riwonace-ollama ollama pull nomic-embed-text
 
 # 3. 기본 Spring AI MCP 서버 실행
-./gradlew :mcp-server:bootRun
+./gradlew :mcp-server-spring:bootRun
 
 # 4. 별도 터미널에서 에이전트 실행
-./gradlew :agent-app:bootRun
+./gradlew :agent-app-spring:bootRun
 ```
 
 웹 UI를 사용하려면 별도 터미널에서 다음 명령을 실행합니다.
@@ -168,9 +188,9 @@ npm run build
 문항별 원시 JSON 결과를 보존해야 합니다.
 
 CI(`./gradlew test`, `npm run build`, `eval/` 파이썬 테스트)는 기본 실행 경로인
-`agent-app`/`mcp-server`/`client`/`eval`만 검증합니다. `air-server`,
-`agent-app-go`/`mcp-server-go`는 선택형 비교 구현이라 CI 대상이 아니며, 각자의
-오라클 테스트(`agent-app-go test`, `air-server`의 `npm test`)로 별도 검증합니다.
+`agent-app-spring`/`mcp-server-spring`/`client`/`eval`만 검증합니다. `mcp-server-air`,
+`agent-app-go`/`mcp-server-go`는 선택형 구현체라 CI 대상이 아니며, 각자의 오라클
+테스트(`agent-app-go test`, `mcp-server-air`의 `npm test`)로 별도 검증합니다.
 
 ## 문서 안내
 

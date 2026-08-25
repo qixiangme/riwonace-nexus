@@ -75,9 +75,9 @@ AnswerabilityGate ── 근거가 부족한 주장을 차단
 docker compose up -d
 docker exec riwonace-ollama ollama pull gemma3:1b
 docker exec riwonace-ollama ollama pull nomic-embed-text
-./gradlew :mcp-server:bootRun
+./gradlew :mcp-server-spring:bootRun
 # 다른 터미널
-./gradlew :agent-app:bootRun
+./gradlew :agent-app-spring:bootRun
 ```
 
 간단한 확인:

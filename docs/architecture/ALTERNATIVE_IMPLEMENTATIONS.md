@@ -8,10 +8,10 @@
 
 | 실험 | 무엇을 바꿨나 | 무엇을 유지했나 | 검증한 것 |
 |---|---|---|---|
-| AIR (`air-server`) | 프레임워크(Spring AI MCP → Node.js AIR MCP) | 언어(TypeScript 아님, 순수 JS), MCP 도구 계약 | 서버 URL만 바꿔도 `agent-app` 코드 변경 없이 교체 가능한가 |
+| AIR (`mcp-server-air`) | 프레임워크(Spring AI MCP → Node.js AIR MCP) | 언어(TypeScript 아님, 순수 JS), MCP 도구 계약 | 서버 URL만 바꿔도 `agent-app` 코드 변경 없이 교체 가능한가 |
 | Go (`mcp-server-go`, `agent-app-go`) | 언어·런타임 전체(Kotlin/JVM → Go) | 라우팅·NL2SQL·SQL 검증·caching 정책·MCP 도구 계약 | 다른 언어로 1:1 포팅했을 때 성능·자원 사용량이 실제로 어떻게 다른가 |
 
-## AIR (`air-server`)
+## AIR (`mcp-server-air`)
 
 Node.js의 AIR MCP 프레임워크로 `mcp-server`와 같은 도구 이름(`vector_search`,
 `run_sql`, `kg_search`)과 `db://schema` Resource를 노출한다.
@@ -22,11 +22,11 @@ AIR는 벡터 데이터를 스스로 적재하지 않는다 — Spring AI `mcp-s
 적재한 뒤 전환한다.
 
 ```bash
-npm ci --prefix air-server
-npm --prefix air-server start
+npm ci --prefix mcp-server-air
+npm --prefix mcp-server-air start
 
 # 별도 터미널
-MCP_SERVER_URL=http://localhost:8082 ./gradlew :agent-app:bootRun
+MCP_SERVER_URL=http://localhost:8082 ./gradlew :agent-app-spring:bootRun
 ```
 
 기본 Spring AI 구현으로 돌아가려면 `MCP_SERVER_URL`을 생략하거나
@@ -49,15 +49,15 @@ MCP_SERVER_URL=http://localhost:8082 ./gradlew :agent-app:bootRun
 - **에러 처리**: JSON 문자열을 임의 위치에서 자를 수 있어(문자 수 기준 truncate)
   잘린 JSON이 파싱 실패로 이어질 가능성이 있고, 원본 DB 예외 메시지를 그대로
   반환해 내부 구조가 노출될 수 있다.
-- **CI 미포함**: `air-server`는 루트 CI(`agent-app`/`mcp-server`/`client`/`eval`)
-  대상이 아니다. 자체 `npm test`(`air-server/server.test.mjs`)로만 검증되므로,
+- **CI 미포함**: `mcp-server-air`는 루트 CI(`agent-app`/`mcp-server`/`client`/`eval`)
+  대상이 아니다. 자체 `npm test`(`mcp-server-air/server.test.mjs`)로만 검증되므로,
   Spring AI 쪽 회귀가 AIR에도 동일하게 적용됐는지는 수동 확인이 필요하다.
 
 키워드가 전혀 걸리지 않는 질문에서 라우팅 정확도를 끌어올린 설정(참고용, AIR
 전환과는 무관하게 baseline에도 적용 가능):
 
 ```bash
-OLLAMA_MODEL=gemma3:4b ROUTER_FALLBACK=semantic-ai ./gradlew :agent-app:bootRun
+OLLAMA_MODEL=gemma3:4b ROUTER_FALLBACK=semantic-ai ./gradlew :agent-app-spring:bootRun
 ```
 
 공개셋 93.3%, 키워드 무교집합 보류셋 96.7%이며 100%는 아니다. 평가 범위와 원시

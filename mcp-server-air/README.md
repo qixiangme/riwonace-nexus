@@ -1,4 +1,4 @@
-# air-server
+# mcp-server-air
 
 `mcp-server`(Kotlin/Spring AI)의 선택형 대체 구현. 같은 언어(Kotlin)나 아키텍처를
 바꾸는 게 아니라 **프레임워크만** [AIR](https://github.com/airmcp-dev/air) MCP
@@ -22,7 +22,7 @@ npm ci
 npm start        # :8082에서 기동
 
 # 별도 터미널에서 agent-app을 AIR로 향하게 전환
-MCP_SERVER_URL=http://localhost:8082 ./gradlew :agent-app:bootRun
+MCP_SERVER_URL=http://localhost:8082 ./gradlew :agent-app-spring:bootRun
 ```
 
 ## 테스트

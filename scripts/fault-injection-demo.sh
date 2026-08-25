@@ -198,7 +198,7 @@ demo_hotswap() {
     print_step "3. AIR MCP 서버로 전환 데모"
     print_warning "실제 전환은 환경변수 변경 후 재시작 필요:"
     print_info "  export MCP_SERVER_URL=$MCP_AIR_URL"
-    print_info "  ./gradlew :agent-app:bootRun"
+    print_info "  ./gradlew :agent-app-spring:bootRun"
 
     echo ""
     print_step "4. MCP 표준 호환성 검증 포인트:"
