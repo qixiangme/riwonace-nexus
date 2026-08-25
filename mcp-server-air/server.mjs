@@ -18,6 +18,22 @@ const OLLAMA = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 const MAX_OUTPUT_CHARS = 4000;
 const MAX_HINT_VALUES = 12;
 
+// 검색 가치가 높은 predicate 키워드 - 엔티티가 없을 때 이것들로 검색
+// DB의 predicate는 한글: 담당한다, 사용한다, 소속, 부서장, 이끈다, 프로젝트, 이슈보고
+// (Kotlin RetrievalTools.kt의 PREDICATE_KEYWORDS 1:1 포팅)
+const PREDICATE_KEYWORDS = [
+  ['부서장', '부서장'],
+  ['담당', '담당한다'],
+  ['사용', '사용한다'],
+  ['소속', '소속'],
+  ['이끈', '이끈다'],
+  ['이끌', '이끈다'],
+  ['이끄', '이끈다'], // "이끄는" → 이끈다 (어간 "이끌"이 아니라 "이끄"로 활용되는 경우)
+  ['보고', '이슈보고'],
+  ['팀장', '부서장'],
+  ['진행', '프로젝트'], // "진행 중인 프로젝트" → 프로젝트 predicate
+];
+
 /** 모든 도구 공통 방어막: 예외를 오류 JSON으로, 출력 크기 제한 (Kotlin guard()와 동일 정책) */
 const guard = async (fn) => {
   try {
@@ -164,34 +180,112 @@ const server = defineServer({
       params: { query: 'string' },
       handler: ({ query }) =>
         guard(async () => {
-          const tokens = query.split(/[\s,.?!'"()]+/).map((t) => t.trim()).filter((t) => t.length >= 2).slice(0, 8);
-          if (tokens.length === 0) return [];
-          const where = tokens
+          // 한국어 조사 제거: "Product-C1을" → "Product-C1" (Kotlin RetrievalTools.kt 포팅)
+          const SUFFIXES = ['은', '는', '이', '가', '을', '를', '의', '에서', '에', '으로', '로', '와', '과', '도'];
+          const rawTokens = [
+            ...new Set(
+              query
+                .split(/[\s,.?!'"()]+/)
+                .map((t) => t.trim())
+                .filter((t) => t.length >= 2)
+                .map((token) => {
+                  for (const suf of SUFFIXES) {
+                    if (token.length > suf.length + 2 && token.endsWith(suf)) return token.slice(0, -suf.length);
+                  }
+                  return token;
+                }),
+            ),
+          ];
+          const entityTokens = rawTokens.filter(
+            (t) => t.includes('-') || t.endsWith('팀') || t.endsWith('부') || t.endsWith('부서') || t.endsWith('사업부') || /[A-Z]/.test(t),
+          );
+          // "이끄는"은 사람 뒤에 오면 "이끈다"(프로젝트 리드)지만, 부서 뒤에 오면 실제로는
+          // "부서장"을 묻는 것이다("경영지원팀을 이끄는 사람" = 부서장).
+          const isDepartmentEntity = entityTokens.some((t) => ['팀', '부', '부서', '사업부'].some((suf) => t.endsWith(suf)));
+          const LEADS_PROJECT_KEYWORDS = new Set(['이끈', '이끌', '이끄']);
+          const matchedPredicates = [
+            ...new Set(
+              PREDICATE_KEYWORDS.filter(([korean]) => query.includes(korean)).map(([korean, predicate]) =>
+                isDepartmentEntity && LEADS_PROJECT_KEYWORDS.has(korean) ? '부서장' : predicate,
+              ),
+            ),
+          ];
+          const GRAPH_STOP_TOKENS = new Set(['누구', '무엇', '알려줘', '확인해줘', '현재', '실제', '하나', '이상']);
+          const tokens = (entityTokens.length > 0 ? entityTokens : rawTokens.filter((t) => !GRAPH_STOP_TOKENS.has(t))).slice(0, 4);
+          if (tokens.length === 0 && matchedPredicates.length === 0) return [];
+
+          const tokenWhereClause = tokens
             .map((_, i) => {
               const b = i * 4;
               return `subject ILIKE $${b + 1} OR object ILIKE $${b + 2} OR $${b + 3} ILIKE '%' || subject || '%' OR $${b + 4} ILIKE '%' || object || '%'`;
             })
             .join(' OR ');
-          const params = tokens.flatMap((t) => [`%${t}%`, `%${t}%`, t, t]);
+          const tokenParams = tokens.flatMap((t) => [`%${t}%`, `%${t}%`, t, t]);
+          const hasSpecificEntity = entityTokens.length > 0;
+          const predicateWhereClause = matchedPredicates.length > 0 ? matchedPredicates.map(() => 'predicate = ?').join(' OR ') : null;
+
+          // predicate 자리표시자는 위치 기반($n)이 아니라 순서대로 이어붙는 파라미터라 실제 SQL을
+          // 만들 때 $n 인덱스를 새로 부여해야 한다.
+          let paramIdx = tokenParams.length;
+          const predicateWhereIndexed = predicateWhereClause
+            ? matchedPredicates.map(() => `predicate = $${++paramIdx}`).join(' OR ')
+            : null;
+          const where =
+            tokens.length > 0 && predicateWhereIndexed
+              ? hasSpecificEntity
+                ? `(${tokenWhereClause}) AND (${predicateWhereIndexed})`
+                : `(${tokenWhereClause}) OR (${predicateWhereIndexed})`
+              : predicateWhereIndexed ?? tokenWhereClause;
+          const params = [...tokenParams, ...matchedPredicates];
+
           const { rows: direct } = await pool.query(
             `SELECT subject, predicate, object FROM kg_triples WHERE ${where} LIMIT 30`,
             params,
           );
-          const entities = [...new Set(direct.flatMap((r) => [r.subject, r.object]))];
+
+          // predicate 2개 이상 매칭되면("부서장이 담당하는") 체이닝: 1홉(엔티티 --[첫 predicate]-->
+          // 중간 엔티티) 다음 2홉(중간 엔티티 --[다음 predicate]--> 결과).
+          const lastPredicate = matchedPredicates.at(-1) ?? null;
+          const directSatisfiesLastPredicate = lastPredicate !== null && direct.some((r) => r.predicate === lastPredicate);
           let neighbors = [];
-          if (entities.length > 0) {
+          if (!directSatisfiesLastPredicate && hasSpecificEntity && tokens.length > 0 && matchedPredicates.length >= 2) {
+            const firstPredicate = matchedPredicates[0];
+            const restPredicates = matchedPredicates.slice(1);
+            const { rows: hop1 } = await pool.query(
+              `SELECT subject, predicate, object FROM kg_triples WHERE (${tokenWhereClause}) AND predicate = $${tokenParams.length + 1} LIMIT 30`,
+              [...tokenParams, firstPredicate],
+            );
+            const intermediateEntities = [...new Set(hop1.flatMap((r) => [r.subject, r.object]))];
+            if (intermediateEntities.length > 0) {
+              const inClause = intermediateEntities.map((_, i) => `$${i + 1}`).join(',');
+              const inClause2 = intermediateEntities.map((_, i) => `$${intermediateEntities.length + i + 1}`).join(',');
+              const restWhere = restPredicates.map((_, i) => `predicate = $${intermediateEntities.length * 2 + i + 1}`).join(' OR ');
+              const { rows } = await pool.query(
+                `SELECT subject, predicate, object FROM kg_triples
+                 WHERE (subject IN (${inClause}) OR object IN (${inClause2})) AND (${restWhere}) LIMIT 30`,
+                [...intermediateEntities, ...intermediateEntities, ...restPredicates],
+              );
+              neighbors = rows;
+            }
+          }
+
+          // 그 외 2홉 확장은 질문이 명시적으로 간접/연쇄 관계를 요구할 때만 수행한다.
+          const entities = [...new Set(direct.flatMap((r) => [r.subject, r.object]))];
+          const requiresExplicitExpansion = ['2홉', '간접', '연쇄', '거쳐', '연결된 프로젝트'].some((cue) => query.includes(cue));
+          let explicitNeighbors = [];
+          if (entities.length > 0 && requiresExplicitExpansion) {
             const inClause = entities.map((_, i) => `$${i + 1}`).join(',');
             const inClause2 = entities.map((_, i) => `$${entities.length + i + 1}`).join(',');
-            neighbors = (
-              await pool.query(
-                `SELECT subject, predicate, object FROM kg_triples
-                 WHERE subject IN (${inClause}) OR object IN (${inClause2}) LIMIT 30`,
-                [...entities, ...entities],
-              )
-            ).rows;
+            const { rows } = await pool.query(
+              `SELECT subject, predicate, object FROM kg_triples
+               WHERE subject IN (${inClause}) OR object IN (${inClause2}) LIMIT 30`,
+              [...entities, ...entities],
+            );
+            explicitNeighbors = rows;
           }
+
           const seen = new Set();
-          return [...direct, ...neighbors]
+          return [...direct, ...neighbors, ...explicitNeighbors]
             .filter((r) => {
               const key = `${r.subject}|${r.predicate}|${r.object}`;
               return seen.has(key) ? false : seen.add(key);
