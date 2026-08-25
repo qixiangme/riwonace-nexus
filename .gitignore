@@ -15,5 +15,5 @@ client/*.tsbuildinfo
 client/qa/node_modules/
 client/qa/screenshots/
 client/qa/results/
-air-server/node_modules/
+mcp-server-air/node_modules/
 bin/
