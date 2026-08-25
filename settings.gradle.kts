@@ -1,3 +1,3 @@
 rootProject.name = "riwonace-nexus"
 
-include("mcp-server", "agent-app")
+include("mcp-server-spring", "agent-app-spring")

@@ -81,10 +81,10 @@ MCP를 사용하기만 하면 자동으로 재현되는 보장은 아니다.
 ```bash
 # 단위 테스트
 ./gradlew test
-npm test --prefix air-server
+npm test --prefix mcp-server-air
 
 # PostgreSQL·Ollama 및 두 MCP 서버가 실행 중일 때
-npm run smoke --prefix air-server -- \
+npm run smoke --prefix mcp-server-air -- \
   http://localhost:8081/sse http://localhost:8082/sse
 ```
 

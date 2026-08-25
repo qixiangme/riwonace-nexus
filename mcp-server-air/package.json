@@ -1,12 +1,12 @@
 {
-  "name": "riwonace-air-server",
+  "name": "riwonace-mcp-server-air",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/qixiangme/riwonace-nexus.git",
-    "directory": "air-server"
+    "directory": "mcp-server-air"
   },
   "type": "module",
   "description": "동일한 MCP 도구 4종의 air 프레임워크 구현체 — MCP 표준 덕분에 에이전트는 URL만 바꿔 연결된다 (L3 계층 교체 가능성 실증)",
