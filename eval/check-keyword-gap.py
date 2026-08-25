@@ -38,7 +38,7 @@ def extract_keywords(source: str) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("dataset")
-    parser.add_argument("--router", default="agent-app/src/main/kotlin/com/riwonace/agent/router/RuleBasedRouter.kt")
+    parser.add_argument("--router", default="agent-app-spring/src/main/kotlin/com/riwonace/agent/router/RuleBasedRouter.kt")
     args = parser.parse_args()
 
     source = Path(args.router).read_text(encoding="utf-8")
