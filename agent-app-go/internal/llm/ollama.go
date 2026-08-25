@@ -20,6 +20,7 @@ type ChatClient struct {
 	Temperature float64
 	NumCtx      int
 	MaxTokens   int
+	Seed        int
 	Client      *http.Client
 }
 
@@ -39,6 +40,7 @@ type ollamaChatOptions struct {
 	Temperature float64 `json:"temperature"`
 	NumCtx      int     `json:"num_ctx"`
 	NumPredict  int     `json:"num_predict"`
+	Seed        int     `json:"seed,omitempty"`
 }
 
 type ollamaChatResponse struct {
@@ -58,6 +60,7 @@ func (c *ChatClient) Complete(ctx context.Context, system, user string) (string,
 			Temperature: c.Temperature,
 			NumCtx:      c.NumCtx,
 			NumPredict:  c.MaxTokens,
+			Seed:        c.Seed,
 		},
 	}
 	body, err := json.Marshal(reqBody)

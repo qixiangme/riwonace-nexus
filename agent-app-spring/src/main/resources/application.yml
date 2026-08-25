@@ -14,6 +14,9 @@ spring:
           model: ${OLLAMA_MODEL:gemma3:1b}
           # 사실 질의 시스템에는 결정적 생성이 유리 — 같은 질문에 같은 답 (재현성)
           temperature: 0.0
+          # temperature=0이어도 seed 없이는 Ollama가 매 요청 다른 난수 상태로 샘플링해
+          # 출력 토큰 수(=CPU 추론 지연시간)가 크게 요동친다 — 고정 seed로 완전한 결정성 확보
+          seed: 42
           # KV 캐시 메모리 절감 — TACC 예산(2,400자)이 이 안에 들어오도록 설계됨
           num-ctx: 4096
           # CPU 추론에서 생성 토큰 수 = 지연시간. 답변 폭주 방지 겸 지연 안정화

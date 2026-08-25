@@ -59,6 +59,7 @@ func main() {
 		Temperature: 0.0,
 		NumCtx:      4096,
 		MaxTokens:   512,
+		Seed:        42,
 	}
 	go chatClient.Warmup(context.Background())
 
