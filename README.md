@@ -51,8 +51,9 @@ MCP Server (:8081)
 | `eval` | 평가 및 벤치마크 도구 |
 
 지정과제 권장 모델 Gemma 4 E2B(`gemma4:e2b-it-qat`) 기준 302문항 동일 조건
-실측에서 세 구현체 모두 라우팅 100.0%, 답변 정확도 92.7~93.0%로 사실상
-동급이며, 리소스는 Go가 Spring AI 대비 약 11분의 1입니다. 세부 비교는
+실측에서 세 구현체 모두 라우팅 100.0%, 답변 정확도 100.0%(SQL·VECTOR·GRAPH
+전 영역, 오류 0건)를 달성했으며, 리소스는 Go가 Spring AI 대비 약
+11분의 1입니다. 세부 비교는
 [구현체 비교](./docs/architecture/IMPLEMENTATIONS.md), 종합 결과는
 [최종 결과 보고서](./report/FINAL_REPORT.md)를 참고하세요.
 
