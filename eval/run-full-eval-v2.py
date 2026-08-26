@@ -47,8 +47,11 @@ def score_answer(answer: str, item: dict[str, Any]) -> tuple[bool, list[str], st
 
     Returns: (correct, matched_keywords, rule_used)
     """
-    answer_lower = answer.casefold()
-    keywords = [str(k) for k in item.get("keywords", [])]
+    # 천단위 쉼표(예: "7,917만원")는 채점 대상 숫자 키워드(예: "7917만원")와
+    # 값이 같지만 부분 문자열 포함 검사로는 걸리지 않는다 — 답변/키워드 양쪽에서
+    # 쉼표를 제거해 비교한다.
+    answer_lower = answer.casefold().replace(",", "")
+    keywords = [str(k).replace(",", "") for k in item.get("keywords", [])]
     rule = item.get("answerRule")
 
     if rule is None:
@@ -59,17 +62,17 @@ def score_answer(answer: str, item: dict[str, Any]) -> tuple[bool, list[str], st
     rule_type = rule.get("type", "anyOf")
 
     if rule_type == "anyOf":
-        required = rule.get("required", keywords)
+        required = [str(k).replace(",", "") for k in rule.get("required", keywords)]
         matched = [k for k in required if k.casefold() in answer_lower]
         return bool(matched), matched, "anyOf"
 
     elif rule_type == "allOf":
-        required = rule.get("required", keywords)
+        required = [str(k).replace(",", "") for k in rule.get("required", keywords)]
         matched = [k for k in required if k.casefold() in answer_lower]
         return len(matched) == len(required), matched, "allOf"
 
     elif rule_type == "minMatches":
-        from_list = rule.get("from", keywords)
+        from_list = [str(k).replace(",", "") for k in rule.get("from", keywords)]
         count = rule.get("count", 1)
         matched = [k for k in from_list if k.casefold() in answer_lower]
         return len(matched) >= count, matched, f"minMatches({count})"

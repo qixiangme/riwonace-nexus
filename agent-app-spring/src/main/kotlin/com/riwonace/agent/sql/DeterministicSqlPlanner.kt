@@ -126,6 +126,11 @@ class DeterministicSqlPlanner {
             return "SELECT sum(s.amount) AS total_sales FROM sales s JOIN clients c ON s.client_id = c.id " +
                 "WHERE c.company_size = ${quote(size)}"
         }
+        if (isIndustryContractCount(q)) {
+            val industry = INDUSTRY.find(question)?.value ?: return null
+            return "SELECT count(*) AS count FROM contracts co JOIN clients c ON co.client_id = c.id " +
+                "WHERE c.industry = ${quote(industry)}"
+        }
 
         val category = CATEGORY.find(q)?.value
         if (category != null) {
@@ -176,6 +181,8 @@ class DeterministicSqlPlanner {
         "매출" in q && listOf("총", "전체", "합계").any(q::contains) && COMPANY_SIZE.containsMatchIn(q)
     private fun isSupportTicketCount(q: String) =
         "티켓" in q && listOf("몇", "건", "개수", "수").any(q::contains)
+    private fun isIndustryContractCount(q: String) =
+        "계약" in q && listOf("건", "개수", "수").any(q::contains) && "활성" !in q && INDUSTRY.containsMatchIn(q)
     private fun quote(value: String) = "'${value.replace("'", "''")}'"
     private fun normalizeCategory(value: String): String = when (value.lowercase()) {
         "보안", "보안 솔루션" -> "security"
@@ -198,6 +205,9 @@ class DeterministicSqlPlanner {
         private val CATEGORY_KR = Regex("(?i)(?:보안(?: 솔루션)?|security|클라우드|cloud|데이터|data|컨설팅|consulting)")
         private val REGION = Regex("(서울|부산|대전|광주|인천|대구|경기|제주)")
         private val COMPANY_SIZE = Regex("(?i)(enterprise|startup|mid)")
+        private val INDUSTRY = Regex(
+            "(?i)(미디어|공공기관|유통/물류|유통·물류|에너지|IT/SW|건설|의료/바이오|의료·바이오|제조업|교육|금융)",
+        )
         private val QUARTER = Regex("(20\\d{2})\\s*년?\\s*([1-4])\\s*분기")
         private val YEAR = Regex("(20\\d{2})\\s*년")
         private val ACTIVE_AMOUNT = Regex("활성\\s*계약[^0-9]{0,12}([0-9][0-9,]*)")

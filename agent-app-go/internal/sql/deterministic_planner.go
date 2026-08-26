@@ -20,6 +20,7 @@ var (
 	categoryKrPattern  = regexp.MustCompile(`(?i)(?:보안(?: 솔루션)?|security|클라우드|cloud|데이터|data|컨설팅|consulting)`)
 	regionPattern      = regexp.MustCompile(`서울|부산|대전|광주|인천|대구|경기|제주`)
 	companySizePattern = regexp.MustCompile(`(?i)enterprise|startup|mid`)
+	industryPattern    = regexp.MustCompile(`(?i)미디어|공공기관|유통/물류|유통·물류|에너지|IT/SW|건설|의료/바이오|의료·바이오|제조업|교육|금융`)
 	quarterPattern     = regexp.MustCompile(`(20\d{2})\s*년?\s*([1-4])\s*분기`)
 	yearPattern        = regexp.MustCompile(`(20\d{2})\s*년`)
 	activeAmountRe     = regexp.MustCompile(`활성\s*계약[^0-9]{0,12}([0-9][0-9,]*)`)
@@ -206,6 +207,15 @@ func (p *DeterministicSqlPlanner) Plan(question string) *string {
 			"WHERE c.company_size = " + quote(size)
 		return &sql
 	}
+	if isIndustryContractCount(q) {
+		industry := findMatch(industryPattern, question)
+		if industry == "" {
+			return nil
+		}
+		sql := "SELECT count(*) AS count FROM contracts co JOIN clients c ON co.client_id = c.id " +
+			"WHERE c.industry = " + quote(industry)
+		return &sql
+	}
 
 	category := findMatch(categoryPattern, q)
 	if category != "" {
@@ -312,6 +322,9 @@ func isCompanySizeTotalSales(q string) bool {
 }
 func isSupportTicketCount(q string) bool {
 	return strings.Contains(q, "티켓") && containsAnyStr(q, "몇", "건", "개수", "수")
+}
+func isIndustryContractCount(q string) bool {
+	return strings.Contains(q, "계약") && containsAnyStr(q, "건", "개수", "수") && !strings.Contains(q, "활성") && industryPattern.MatchString(q)
 }
 
 func containsAnyStr(q string, options ...string) bool {
