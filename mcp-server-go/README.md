@@ -52,8 +52,8 @@ go test ./...
 
 `kg_search` predicate 체이닝, `Product-`/`Client-` 패턴 인식 등 baseline의
 버그 수정을 모두 반영했다. Gemma 4 E2B 302문항 재검증에서 라우팅 100.0%,
-답변 정확도 93.0%로 `mcp-server-spring`과 동급이면서 리소스는 약 11분의
-1이라 **기본 구현으로 사용한다.** 자세한 실측 비교는 저장소 루트
+답변 정확도 100.0%(오류 0건)로 `mcp-server-spring`과 소수점까지 동일하며
+리소스는 약 11분의 1이라 **기본 구현으로 사용한다.** 자세한 실측 비교는 저장소 루트
 [`docs/architecture/IMPLEMENTATIONS.md`](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 
 ## 위험 / 알려진 한계

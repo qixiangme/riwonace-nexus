@@ -2,8 +2,9 @@
 
 `agent-app`의 기본 구현체다. `agent-app-spring`(Kotlin/Spring AI, Architecture
 v2 경로)과 동일한 라우팅·NL2SQL·answerability gate·evidence 최적화·recovery
-policy 로직을 재현한다. 302문항 동일 조건 실측에서 답변 정확도 73.8%로
-Spring AI와 동급이며, 리소스 사용량은 11분의 1 수준이다. 실측 비교는
+policy 로직을 재현한다. Gemma 4 E2B 302문항 동일 조건 실측에서 라우팅
+100.0%, 답변 정확도 100.0%로 Spring AI와 소수점까지 동일하며, 리소스
+사용량은 11분의 1 수준이다. 실측 비교는
 [IMPLEMENTATIONS.md](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 상세 배경은 저장소 루트 이슈 [#100](https://github.com/qixiangme/riwonace-nexus/issues/100),
 [#101](https://github.com/qixiangme/riwonace-nexus/issues/101)을 참고.
@@ -63,8 +64,9 @@ go test ./...
 
 실제 `mcp-server-go` + Postgres + Ollama(`gemma4:e2b-it-qat`,
 `nomic-embed-text`)에 붙여 302문항(`eval/generalization-eval.json`)을
-end-to-end로 재검증했다: 라우팅 정확도 100.0%, 답변 정확도 93.0%로
-`agent-app-spring`과 소수점까지 동일하다. 세부 수치는
+end-to-end로 재검증했다: 라우팅 정확도 100.0%, 답변 정확도 100.0%(SQL·
+VECTOR·GRAPH 전 영역, 오류 0건)로 `agent-app-spring`과 소수점까지
+동일하다. 세부 수치는
 [IMPLEMENTATIONS.md](../docs/architecture/IMPLEMENTATIONS.md)를 참고한다.
 
 ## 권장 사항

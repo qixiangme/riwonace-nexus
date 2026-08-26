@@ -89,7 +89,15 @@ Company-X 문서는 파일 하나를 문서 하나로 적재하므로 가변 청
 LLM이 생성한 SQL은 신뢰하지 않는다. SELECT/WITH 단일 문장만 허용,
 DML·DDL·주석·다중 문장·`pg_sleep` 차단, LIMIT 자동 보강. 단위 테스트로 검증.
 
-### 3.6 Pylon-7 계층 대응
+### 3.6 실패 시 모델 에스컬레이션 (ModelEscalator)
+`ModelEscalator`는 질문의 복잡도·불확실성에 따라 SMALL(`gemma3:1b`급) → MEDIUM
+(`qwen2.5:3b`급) → LARGE(`qwen2.5:7b`급) 중 모델 티어를 고른다. 단순 질문은
+항상 작은 모델로 빠르게 응답하고, 복잡도가 높거나 이전 시도가 불확실했던
+질문만 상위 모델로 재시도한다. `agent.escalation.enabled` 설정으로 켜고 끌 수
+있으며, 이 저장소의 302문항 실측(3-way 비교)은 단일 모델(Gemma 4 E2B)
+기준이라 기본값으로는 비활성화되어 있다.
+
+### 3.7 Pylon-7 계층 대응
 | Pylon-7 계층 | 구현 위치 |
 |---|---|
 | L1 데이터 저장 | PostgreSQL (vector_store, 관계형, kg_triples) |
@@ -142,6 +150,7 @@ DML·DDL·주석·다중 문장·`pg_sleep` 차단, LIMIT 자동 보강. 단위 
 
 | 컴포넌트 | 파일 | 역할 | 참조 논문 |
 |---|---|---|---|
+| **DeterministicSqlPlanner** | `sql/DeterministicSqlPlanner.kt` | 자주 나오는 질문 패턴(업종별 계약 건수 등)을 LLM 호출 없이 SQL 템플릿에 값만 채워 결정적으로 생성. `generateSql()`에서 NL2SQL 파이프라인보다 먼저 확인해 매칭되면 이후 단계를 건너뜀 | - |
 | **TfIdfRouter** | `router/TfIdfRouter.kt` | 키워드 미매칭 시 TF-IDF + k-NN으로 라우트 분류 | RAGRouter-Bench (2026) |
 | **SchemaLinker** | `sql/SchemaLinker.kt` | 질문의 엔티티를 스키마 테이블/컬럼 값과 매칭 (예: "플랫폼팀" → `departments.name='플랫폼팀'`) | SchemaGraphSQL (2025) |
 | **FewShotSelector** | `sql/FewShotSelector.kt` | 질문과 유사한 SQL 예시 3개를 동적 선택 (키워드+Jaccard+코사인) | Few-Shot Prompt Optimization (2025) |
