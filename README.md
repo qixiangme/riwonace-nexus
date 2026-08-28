@@ -1,9 +1,9 @@
-# Riwonace Nexus
+# Liwonace Nexus
 
 [![CI](https://github.com/qixiangme/riwonace-nexus/actions/workflows/ci.yml/badge.svg)](https://github.com/qixiangme/riwonace-nexus/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-Riwonace Nexus는 사내 문서, 관계형 데이터, 지식 그래프를 자연어로 검색하는
+Liwonace Nexus는 사내 문서, 관계형 데이터, 지식 그래프를 자연어로 검색하는
 온프레미스 AI 데이터 플랫폼입니다. 로컬 Ollama 모델을 사용하며, 데이터 접근 기능은
 [Model Context Protocol(MCP)](https://modelcontextprotocol.io/) 도구로 제공합니다.
 
