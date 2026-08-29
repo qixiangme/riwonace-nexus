@@ -14,6 +14,7 @@ from pathlib import Path
 
 from answer_rules import grade_answer
 from result_report import build_report
+from runtime_preflight import detect_runtime_blocker, is_local_base_url, write_blocked_report
 
 
 def git_value(*args: str) -> str:
@@ -44,7 +45,36 @@ def main() -> int:
     parser.add_argument("--model-label", default="unknown")
     parser.add_argument("--router-label", default="unknown")
     parser.add_argument("--mcp-label", default="unknown")
+    parser.add_argument("--skip-runtime-preflight", action="store_true")
     args = parser.parse_args()
+
+    metadata = {
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "commit": git_value("rev-parse", "HEAD"),
+        "branch": git_value("branch", "--show-current"),
+        "dirty": bool(git_value("status", "--porcelain", "--untracked-files=no")),
+        "dataset": args.set_file,
+        "baseUrl": args.base_url,
+        "reps": args.reps,
+        "model": args.model_label,
+        "router": args.router_label,
+        "mcpServer": args.mcp_label,
+        "runtimePreflight": {
+            "enabled": not args.skip_runtime_preflight,
+            "requiresDocker": is_local_base_url(args.base_url),
+        },
+    }
+    if not args.skip_runtime_preflight:
+        blocker = detect_runtime_blocker(
+            args.base_url,
+            timeout=min(args.timeout, 5),
+            require_docker=is_local_base_url(args.base_url),
+        )
+        if blocker is not None:
+            write_blocked_report(args.output, metadata, blocker)
+            print(f"blocked: {blocker['kind']} - {blocker['message']}")
+            print(f"saved: {args.output}")
+            return 3
 
     questions = json.loads(Path(args.set_file).read_text(encoding="utf-8"))["questions"]
     rows: list[dict[str, object]] = []
@@ -85,18 +115,7 @@ def main() -> int:
             )
 
     report = build_report(
-        {
-            "createdAt": datetime.now(timezone.utc).isoformat(),
-            "commit": git_value("rev-parse", "HEAD"),
-            "branch": git_value("branch", "--show-current"),
-            "dirty": bool(git_value("status", "--porcelain", "--untracked-files=no")),
-            "dataset": args.set_file,
-            "baseUrl": args.base_url,
-            "reps": args.reps,
-            "model": args.model_label,
-            "router": args.router_label,
-            "mcpServer": args.mcp_label,
-        },
+        metadata,
         rows,
     )
     summary = report["summary"]
