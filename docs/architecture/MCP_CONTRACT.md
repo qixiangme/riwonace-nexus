@@ -49,7 +49,7 @@
 `get_schema`는 실행 Tool이 아니라 `db://schema` MCP **Resource**다. 스키마 조회는
 "실행 동작"이 아니라 "지식(Knowledge)"이므로 Tool 3종(`vector_search`, `run_sql`,
 `kg_search`)과 경계를 분리했다 — 자세한 배경은
-[`RetrievalToolsContractTest`](../../mcp-server/src/test/kotlin)와
+[`RetrievalToolsContractTest`](../../mcp-server-spring/src/test/kotlin)와
 [CONTEST_ALIGNMENT.md](../CONTEST_ALIGNMENT.md)를 참고한다.
 
 ## MCP 서버 설정
