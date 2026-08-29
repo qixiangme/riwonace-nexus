@@ -17,6 +17,7 @@ from pathlib import Path
 from answer_rules import grade_answer
 from claim_support import evaluate_claim_support
 from result_report import build_report
+from runtime_preflight import detect_runtime_blocker, is_local_base_url, write_blocked_report
 
 
 def git_value(*args: str) -> str:
@@ -59,11 +60,46 @@ def main() -> int:
     parser.add_argument("--context-policy", default="CURRENT")
     parser.add_argument("--mcp-label", default="spring-ai")
     parser.add_argument("--allow-dirty", action="store_true")
+    parser.add_argument("--skip-runtime-preflight", action="store_true")
     args = parser.parse_args()
 
     dirty = bool(git_value("status", "--porcelain", "--untracked-files=no"))
     if dirty and not args.allow_dirty:
         raise SystemExit("refusing benchmark from dirty tracked worktree; commit first or use --allow-dirty for exploration")
+
+    metadata = {
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "commit": git_value("rev-parse", "HEAD"),
+        "branch": git_value("branch", "--show-current"),
+        "dirty": dirty,
+        "dataset": args.set_file,
+        "datasetSha256": hashlib.sha256(Path(args.set_file).read_bytes()).hexdigest(),
+        "baseUrl": args.base_url,
+        "reps": args.reps,
+        "seed": args.seed,
+        "split": args.split,
+        "limit": args.limit,
+        "model": args.model_label,
+        "systemMode": args.system_mode,
+        "contextPolicy": args.context_policy,
+        "mcpServer": args.mcp_label,
+        "evaluatorVersion": "3.0",
+        "runtimePreflight": {
+            "enabled": not args.skip_runtime_preflight,
+            "requiresDocker": is_local_base_url(args.base_url),
+        },
+    }
+    if not args.skip_runtime_preflight:
+        blocker = detect_runtime_blocker(
+            args.base_url,
+            timeout=min(args.timeout, 5),
+            require_docker=is_local_base_url(args.base_url),
+        )
+        if blocker is not None:
+            write_blocked_report(args.output, metadata, blocker)
+            print(f"blocked: {blocker['kind']} - {blocker['message']}")
+            print(f"saved: {args.output}")
+            return 3
 
     data = json.loads(Path(args.set_file).read_text(encoding="utf-8"))
     questions = data["questions"]
@@ -134,25 +170,7 @@ def main() -> int:
                 flush=True,
             )
 
-    metadata = {
-        "createdAt": datetime.now(timezone.utc).isoformat(),
-        "commit": git_value("rev-parse", "HEAD"),
-        "branch": git_value("branch", "--show-current"),
-        "dirty": dirty,
-        "dataset": args.set_file,
-        "datasetVersion": data.get("version", "unknown"),
-        "datasetSha256": hashlib.sha256(Path(args.set_file).read_bytes()).hexdigest(),
-        "baseUrl": args.base_url,
-        "reps": args.reps,
-        "seed": args.seed,
-        "split": args.split,
-        "limit": args.limit,
-        "model": args.model_label,
-        "systemMode": args.system_mode,
-        "contextPolicy": args.context_policy,
-        "mcpServer": args.mcp_label,
-        "evaluatorVersion": "3.0",
-    }
+    metadata["datasetVersion"] = data.get("version", "unknown")
     report = build_report(metadata, rows)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)

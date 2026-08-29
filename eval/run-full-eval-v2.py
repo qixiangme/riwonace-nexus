@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from runtime_preflight import detect_runtime_blocker, is_local_base_url, write_blocked_report
+
 
 def git_value(*args: str) -> str:
     try:
@@ -100,7 +102,38 @@ def main() -> int:
     parser.add_argument("--router-label", default="unknown")
     parser.add_argument("--mcp-label", default="unknown")
     parser.add_argument("--route-filter", default=None, help="특정 라우트만 평가 (SQL, VECTOR, GRAPH)")
+    parser.add_argument("--skip-runtime-preflight", action="store_true")
     args = parser.parse_args()
+
+    metadata = {
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "commit": git_value("rev-parse", "HEAD"),
+        "branch": git_value("branch", "--show-current"),
+        "dirty": bool(git_value("status", "--porcelain", "--untracked-files=no")),
+        "dataset": args.set_file,
+        "baseUrl": args.base_url,
+        "reps": args.reps,
+        "model": args.model_label,
+        "router": args.router_label,
+        "mcpServer": args.mcp_label,
+        "routeFilter": args.route_filter,
+        "evaluatorVersion": "2.0",
+        "runtimePreflight": {
+            "enabled": not args.skip_runtime_preflight,
+            "requiresDocker": is_local_base_url(args.base_url),
+        },
+    }
+    if not args.skip_runtime_preflight:
+        blocker = detect_runtime_blocker(
+            args.base_url,
+            timeout=min(args.timeout, 5),
+            require_docker=is_local_base_url(args.base_url),
+        )
+        if blocker is not None:
+            write_blocked_report(args.output, metadata, blocker)
+            print(f"blocked: {blocker['kind']} - {blocker['message']}")
+            print(f"saved: {args.output}")
+            return 3
 
     data = json.loads(Path(args.set_file).read_text(encoding="utf-8"))
     questions = data["questions"]
@@ -208,22 +241,9 @@ def main() -> int:
         "outcomes": dict(sorted(failure_types.items())),
     }
 
+    metadata["datasetVersion"] = data.get("version", "unknown")
     report = {
-        "metadata": {
-            "createdAt": datetime.now(timezone.utc).isoformat(),
-            "commit": git_value("rev-parse", "HEAD"),
-            "branch": git_value("branch", "--show-current"),
-            "dirty": bool(git_value("status", "--porcelain", "--untracked-files=no")),
-            "dataset": args.set_file,
-            "datasetVersion": data.get("version", "unknown"),
-            "baseUrl": args.base_url,
-            "reps": args.reps,
-            "model": args.model_label,
-            "router": args.router_label,
-            "mcpServer": args.mcp_label,
-            "routeFilter": args.route_filter,
-            "evaluatorVersion": "2.0",
-        },
+        "metadata": metadata,
         "summary": summary,
         "rows": rows,
     }
