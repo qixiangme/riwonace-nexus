@@ -87,14 +87,13 @@ Ollama.app과 Docker 컨테이너의 Ollama가 포트를 동시에 점유하거�
 차이는 여전히 유의미하지 않다(10.8~11.4초, 4% 이내). 이 결론은 로컬 환경
 기준이며, 서버급 GPU 추론 인프라에서는 재검증이 필요하다.
 
-### 재현 시 주의: `ROUTER_FALLBACK=semantic-ai` 누락
+### 폴백 라우터 기본값: `semantic-ai`
 
-세 구현체 모두 이 환경변수 없이 실행하면 규칙 기반 라우터가 "인원수",
-"책임자"처럼 키워드 목록에 없는 표현을 VECTOR로 잘못 분류해 GRAPH 라우팅
-정확도가 42%까지 떨어진다. 이는 구현체 간 차이가 아니라 규칙 기반 라우터의
-공통 설계(사전 정의 키워드 미매칭 시 fallback 필요)이므로, 세 구현체
-모두 **반드시 `ROUTER_FALLBACK=semantic-ai`를 설정한 상태로 실행·비교해야
-한다.**
+규칙 기반 라우터만으로 실행하면 "인원수", "책임자"처럼 키워드 목록에 없는
+표현을 VECTOR로 잘못 분류해 GRAPH 라우팅 정확도가 42%까지 떨어진다. 이는
+구현체 간 차이가 아니라 규칙 기반 라우터의 공통 설계이므로, Go와 Spring AI
+에이전트 모두 `semantic-ai` 폴백을 **기본값으로 켜 둔다**. 폴백 없이
+비교하려면 `ROUTER_FALLBACK=none`으로 끈다.
 
 ## 기본 구현: Go
 
@@ -120,7 +119,7 @@ cd mcp-server-go && DATABASE_URL=postgres://riwonace:riwonace@localhost:5433/riw
 # 별도 터미널
 cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
   OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma4:e2b-it-qat SERVER_PORT=8080 \
-  ROUTER_FALLBACK=semantic-ai go run .
+  go run .
 ```
 
 `docker-compose.yml`의 `postgres`(5433)·`ollama`(11434)에 연결한다. 벡터

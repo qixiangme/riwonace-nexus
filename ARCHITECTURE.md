@@ -193,10 +193,11 @@ DML·DDL·주석·다중 문장·`pg_sleep` 차단, LIMIT 자동 보강. 단위 
 └───────────────────┘
 ```
 
-환경변수 `ROUTER_FALLBACK`으로 폴백 전략 선택:
+환경변수 `ROUTER_FALLBACK`으로 폴백 전략 선택 (기본값 `semantic-ai`):
+- `semantic-ai`: LLM 기반 분류 (기본값, 더 정확하지만 느림)
 - `tfidf`: TF-IDF + k-NN 분류
-- `semantic-ai`: LLM 기반 분류 (더 정확하지만 느림)
 - `embedding`: 임베딩 유사도 분류
+- `none`: 폴백 없음 (키워드 미매칭 시 VECTOR)
 
 ## 5. 요청 처리 흐름 (예: "플랫폼팀 평균 급여는?")
 

@@ -18,8 +18,9 @@ type ChatCompleter interface {
 
 // SemanticAiRouteFallback ports router/SemanticAiRouteFallback.kt 1:1: an LLM-based
 // fallback classifier used when RuleBasedRouter finds no deterministic keyword match.
-// Enabled only when main.go wires it in behind ROUTER_FALLBACK=semantic-ai, mirroring
-// the Kotlin @ConditionalOnProperty(name = ["agent.router.fallback"], havingValue = "semantic-ai").
+// Wired in by main.go by default (ROUTER_FALLBACK defaults to semantic-ai; set
+// ROUTER_FALLBACK=none to disable), mirroring the Kotlin
+// @ConditionalOnProperty(name = ["agent.router.fallback"], havingValue = "semantic-ai").
 type SemanticAiRouteFallback struct {
 	Chat   ChatCompleter
 	Logger *slog.Logger

@@ -87,7 +87,7 @@ cd mcp-server-go && DATABASE_URL=postgres://riwonace:riwonace@localhost:5433/riw
 # 다른 터미널
 cd agent-app-go && MCP_SERVER_URL=http://localhost:8081 \
   OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=gemma4:e2b-it-qat SERVER_PORT=8080 \
-  ROUTER_FALLBACK=semantic-ai go run .
+  go run .
 ```
 
 간단한 확인:

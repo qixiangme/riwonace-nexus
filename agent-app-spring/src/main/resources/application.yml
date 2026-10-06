@@ -55,10 +55,10 @@ agent:
       routes: ${EVALUATION_FAULT_ROUTES:}
       mode: ${EVALUATION_FAULT_MODE:EXCEPTION}
   router:
-    # 키워드 미매칭 시 폴백 전략: 빈 값(기본)=VECTOR, tfidf=로컬 k-NN,
-    # embedding=코사인, ai=기존 3-shot 분류,
-    # semantic-ai=데이터 형태·연산 경계를 명시한 의미 분류
-    fallback: ${ROUTER_FALLBACK:}
+    # 키워드 미매칭 시 폴백 전략: semantic-ai(기본)=데이터 형태·연산 경계를 명시한
+    # 의미 분류, tfidf=로컬 k-NN, embedding=코사인, ai=기존 3-shot 분류,
+    # none=폴백 없이 VECTOR 기본값
+    fallback: ${ROUTER_FALLBACK:semantic-ai}
   # Adaptive Model Escalation 설정. Gemma 4 E2B 단일 모델 실측(302문항)에서
   # 에스컬레이션 없이 답변 정확도 93.0%를 냈고, gemma3:1b 세대에서 에스컬레이션으로
   # 보완하던 격차(73.8%)가 모델 자체 성능으로 해소되어 기본값을 off로 바꿨다.

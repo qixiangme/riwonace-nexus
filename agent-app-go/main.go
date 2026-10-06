@@ -70,8 +70,10 @@ func main() {
 	}
 	go chatClient.Warmup(context.Background())
 
+	// 키워드 미매칭 질문을 VECTOR로 흘리면 GRAPH 라우팅 정확도가 42%까지 떨어지므로
+	// semantic-ai 폴백을 기본으로 켠다. ROUTER_FALLBACK=none 으로 끌 수 있다.
 	ruleRouter := &router.RuleBasedRouter{}
-	if getenv("ROUTER_FALLBACK", "") == "semantic-ai" {
+	if getenv("ROUTER_FALLBACK", "semantic-ai") == "semantic-ai" {
 		ruleRouter.Fallback = &router.SemanticAiRouteFallback{Chat: chatClient, Logger: logger}
 	}
 	profiler := &core.QueryProfiler{Router: ruleRouter}
